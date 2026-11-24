@@ -3,29 +3,62 @@ import path from "path";
 import { createSeedDatabase } from "./seed";
 import { PublicProfile, UserProfile, VLinkDatabase } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "vlink-db.json");
+const IS_SERVERLESS = Boolean(
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.LAMBDA_TASK_ROOT ||
+  process.env.VERCEL ||
+  process.env.AMPLIFY_MONOREPO_APP_ROOT ||
+  process.env.NODE_ENV === "production"
+);
+
+function getDbLocation(): { dataDir: string; dbPath: string } {
+  if (IS_SERVERLESS && process.platform !== "win32") {
+    const tmpDir = path.join("/tmp", "vlink-data");
+    const tmpDb = path.join(tmpDir, "vlink-db.json");
+    return { dataDir: tmpDir, dbPath: tmpDb };
+  }
+  const localDir = path.join(process.cwd(), "data");
+  return { dataDir: localDir, dbPath: path.join(localDir, "vlink-db.json") };
+}
 
 export function readDb(): VLinkDatabase {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  const { dataDir, dbPath } = getDbLocation();
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    if (!fs.existsSync(dbPath)) {
+      // If in serverless mode, copy initial bundled seed data from cwd if available
+      const bundledPath = path.join(process.cwd(), "data", "vlink-db.json");
+      if (fs.existsSync(bundledPath)) {
+        const raw = fs.readFileSync(bundledPath, "utf-8");
+        fs.writeFileSync(dbPath, raw, "utf-8");
+        return JSON.parse(raw) as VLinkDatabase;
+      }
+      const seed = createSeedDatabase();
+      fs.writeFileSync(dbPath, JSON.stringify(seed, null, 2), "utf-8");
+      return seed;
+    }
+    const raw = fs.readFileSync(dbPath, "utf-8");
+    return JSON.parse(raw) as VLinkDatabase;
+  } catch (err) {
+    console.warn("readDb warning:", err);
+    return createSeedDatabase();
   }
-  if (!fs.existsSync(DB_PATH)) {
-    const seed = createSeedDatabase();
-    fs.writeFileSync(DB_PATH, JSON.stringify(seed, null, 2), "utf-8");
-    return seed;
-  }
-  const raw = fs.readFileSync(DB_PATH, "utf-8");
-  return JSON.parse(raw) as VLinkDatabase;
 }
 
 export function writeDb(db: VLinkDatabase): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  const { dataDir, dbPath } = getDbLocation();
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const tmpPath = `${dbPath}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(db, null, 2), "utf-8");
+    fs.renameSync(tmpPath, dbPath);
+  } catch (err) {
+    console.warn("writeDb warning:", err);
   }
-  const tmpPath = `${DB_PATH}.tmp`;
-  fs.writeFileSync(tmpPath, JSON.stringify(db, null, 2), "utf-8");
-  fs.renameSync(tmpPath, DB_PATH);
 }
 
 export function toPublicProfile(user: UserProfile): PublicProfile {
