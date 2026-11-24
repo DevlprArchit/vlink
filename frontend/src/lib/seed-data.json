@@ -1,0 +1,1494 @@
+{
+  "users": [
+    {
+      "id": "user-archit",
+      "name": "Archit Sharma",
+      "email": "archit.sharma@hiet.co.in",
+      "passwordHash": "",
+      "campus": "HIET Shahpur (HPTU)",
+      "department": "Computer Science & Engineering",
+      "graduationYear": "2027",
+      "headline": "Full-Stack & Cloud Builder | Next.js 15, TypeScript, AWS Serverless",
+      "bio": "Project Lead of V-Link (Vision LINK). Building unified campus networking, real-time readiness diagnostics, and AI-accelerated career workflows.",
+      "targetRole": "Full-Stack Software Engineer",
+      "verifiedCampusBadge": true,
+      "avatarColor": "#FF5B37",
+      "education": "B.Tech in Computer Science & Engineering, HIET Shahpur (HPTU) \u00b7 2023\u20132027",
+      "skills": [
+        {
+          "name": "TypeScript",
+          "level": 88,
+          "verified": true,
+          "endorsements": 3,
+          "endorsedBy": [
+            "user-tarun",
+            "user-deepika",
+            "user-simran"
+          ]
+        },
+        {
+          "name": "Next.js",
+          "level": 90,
+          "verified": true,
+          "endorsements": 3,
+          "endorsedBy": [
+            "user-tarun",
+            "user-simran"
+          ]
+        },
+        {
+          "name": "React",
+          "level": 88,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-simran"
+          ]
+        },
+        {
+          "name": "AWS",
+          "level": 82,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-tarun"
+          ]
+        },
+        {
+          "name": "Python",
+          "level": 80,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-deepika"
+          ]
+        },
+        {
+          "name": "System Design",
+          "level": 78,
+          "verified": false,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-tarun"
+          ]
+        }
+      ],
+      "projects": [
+        {
+          "id": "proj-vlink",
+          "title": "V-Link : Vision LINK Platform",
+          "description": "Unified student networking & career readiness platform with Next.js 15, AppSync GraphQL, and Python FastAPI AI diagnostics.",
+          "techStack": [
+            "Next.js 15",
+            "TypeScript",
+            "Tailwind CSS",
+            "Python FastAPI",
+            "AWS Cloud"
+          ],
+          "repoUrl": "https://github.com/hiet-cse/vlink-platform",
+          "liveUrl": "http://localhost:3000",
+          "highlights": [
+            "Engineered 11-entity relational database store with instant client synchronization.",
+            "Integrated automated ATS resume export, diagnostic skill graphs, and campus group messaging."
+          ]
+        },
+        {
+          "id": "proj-campuspulse",
+          "title": "CampusPulse Timetable & Attendance Hub",
+          "description": "Real-time departmental hub for students and faculty tracking lab schedules and attendance metrics.",
+          "techStack": [
+            "React",
+            "TypeScript",
+            "Tailwind CSS",
+            "Node.js"
+          ],
+          "repoUrl": "https://github.com/hiet-cse/campuspulse"
+        }
+      ],
+      "interests": [
+        "Full-Stack Engineering",
+        "Serverless Cloud",
+        "AI Career Tech",
+        "Open Source Systems"
+      ],
+      "readinessScore": 84,
+      "readinessTier": "Industry Ready",
+      "readinessDimensions": {
+        "Core Skills": 88,
+        "Diagnostic": 85,
+        "Projects": 88,
+        "Certifications": 80,
+        "Verification": 82,
+        "Coverage": 78
+      },
+      "connections": [
+        "user-tarun",
+        "user-deepika",
+        "user-simran"
+      ],
+      "following": [
+        "user-tarun",
+        "user-deepika",
+        "user-simran"
+      ],
+      "followedCompanies": [
+        "comp-aws",
+        "comp-google",
+        "comp-microsoft"
+      ],
+      "joinedGroups": [
+        "grp-hiet-cse",
+        "grp-cloud-devops",
+        "grp-ai-lab",
+        "grp-ui-ux"
+      ]
+    },
+    {
+      "id": "user-tarun",
+      "name": "Tarun Kashyap",
+      "email": "tarun.kashyap@hiet.co.in",
+      "passwordHash": "",
+      "campus": "HIET Shahpur (HPTU)",
+      "department": "Computer Science & Engineering",
+      "graduationYear": "2027",
+      "headline": "Cloud & DevOps Architect | AWS Lambda, DynamoDB, Docker, CI/CD",
+      "bio": "Building scalable serverless backends and automated deployment pipelines for V-Link. Focused on high-availability cloud infrastructure.",
+      "targetRole": "Cloud & DevOps Engineer",
+      "verifiedCampusBadge": true,
+      "avatarColor": "#00C48C",
+      "education": "B.Tech in Computer Science & Engineering, HIET Shahpur (HPTU) \u00b7 2023\u20132027",
+      "skills": [
+        {
+          "name": "AWS",
+          "level": 90,
+          "verified": true,
+          "endorsements": 3,
+          "endorsedBy": [
+            "user-archit",
+            "user-deepika"
+          ]
+        },
+        {
+          "name": "Docker",
+          "level": 86,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "Python",
+          "level": 82,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-deepika"
+          ]
+        },
+        {
+          "name": "CI/CD",
+          "level": 84,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "Linux",
+          "level": 85,
+          "verified": false,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "Kubernetes",
+          "level": 75,
+          "verified": false,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        }
+      ],
+      "projects": [
+        {
+          "id": "proj-serverless-iac",
+          "title": "AWS SAM Serverless Infrastructure Blueprints",
+          "description": "Production-grade CloudFormation and SAM templates for AppSync GraphQL, DynamoDB, and Cognito user pools.",
+          "techStack": [
+            "AWS SAM",
+            "CloudFormation",
+            "DynamoDB",
+            "Docker"
+          ],
+          "repoUrl": "https://github.com/hiet-cse/vlink-cloud-infra"
+        },
+        {
+          "id": "proj-cicd-pipeline",
+          "title": "Automated Multi-Stage CI/CD GitHub Actions",
+          "description": "Automated linting, Jest coverage verification, and containerized deployment workflows for Next.js and FastAPI.",
+          "techStack": [
+            "GitHub Actions",
+            "Docker",
+            "Jest",
+            "Pytest"
+          ]
+        }
+      ],
+      "interests": [
+        "Serverless Cloud",
+        "Kubernetes",
+        "DevOps Automation",
+        "Distributed Systems"
+      ],
+      "readinessScore": 82,
+      "readinessTier": "Industry Ready",
+      "readinessDimensions": {
+        "Core Skills": 86,
+        "Diagnostic": 82,
+        "Projects": 84,
+        "Certifications": 85,
+        "Verification": 78,
+        "Coverage": 75
+      },
+      "connections": [
+        "user-archit",
+        "user-deepika",
+        "user-simran"
+      ],
+      "following": [
+        "user-archit",
+        "user-deepika",
+        "user-simran"
+      ],
+      "followedCompanies": [
+        "comp-aws",
+        "comp-google"
+      ],
+      "joinedGroups": [
+        "grp-hiet-cse",
+        "grp-cloud-devops"
+      ]
+    },
+    {
+      "id": "user-deepika",
+      "name": "Deepika",
+      "email": "deepika@hiet.co.in",
+      "passwordHash": "",
+      "campus": "HIET Shahpur (HPTU)",
+      "department": "Computer Science & Engineering",
+      "graduationYear": "2027",
+      "headline": "AI/ML & NLP Engineer | Python, FastAPI, PyTorch, Scikit-Learn",
+      "bio": "Developing AI diagnostic models, skill-gap analysis algorithms, and semantic job matching services for V-Link.",
+      "targetRole": "AI/ML Engineer",
+      "verifiedCampusBadge": true,
+      "avatarColor": "#6366F1",
+      "education": "B.Tech in Computer Science & Engineering, HIET Shahpur (HPTU) \u00b7 2023\u20132027",
+      "skills": [
+        {
+          "name": "Python",
+          "level": 92,
+          "verified": true,
+          "endorsements": 3,
+          "endorsedBy": [
+            "user-archit",
+            "user-tarun",
+            "user-simran"
+          ]
+        },
+        {
+          "name": "Machine Learning",
+          "level": 86,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "FastAPI",
+          "level": 88,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "PyTorch",
+          "level": 80,
+          "verified": false,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "NLP",
+          "level": 84,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-simran"
+          ]
+        },
+        {
+          "name": "Data Analytics",
+          "level": 82,
+          "verified": false,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-tarun"
+          ]
+        }
+      ],
+      "projects": [
+        {
+          "id": "proj-vlink-ai",
+          "title": "V-Link Skill Diagnostic & Gap Analysis Engine",
+          "description": "FastAPI microservice executing deterministic radar scoring, dynamic roadmap generation, and mock interview verification.",
+          "techStack": [
+            "Python",
+            "FastAPI",
+            "Scikit-Learn",
+            "Pytest"
+          ],
+          "repoUrl": "https://github.com/hiet-cse/vlink-ai-service"
+        },
+        {
+          "id": "proj-resume-parser",
+          "title": "ATS Semantic Resume & JD Scorer",
+          "description": "TF-IDF and cosine similarity engine extracting key skill competencies against target role specifications.",
+          "techStack": [
+            "Python",
+            "NLP",
+            "Regex",
+            "FastAPI"
+          ]
+        }
+      ],
+      "interests": [
+        "Applied AI",
+        "Natural Language Processing",
+        "Skill Analytics",
+        "Predictive Modeling"
+      ],
+      "readinessScore": 85,
+      "readinessTier": "Industry Ready",
+      "readinessDimensions": {
+        "Core Skills": 90,
+        "Diagnostic": 88,
+        "Projects": 85,
+        "Certifications": 82,
+        "Verification": 80,
+        "Coverage": 82
+      },
+      "connections": [
+        "user-archit",
+        "user-tarun",
+        "user-simran"
+      ],
+      "following": [
+        "user-archit",
+        "user-tarun",
+        "user-simran"
+      ],
+      "followedCompanies": [
+        "comp-google",
+        "comp-microsoft"
+      ],
+      "joinedGroups": [
+        "grp-hiet-cse",
+        "grp-ai-lab"
+      ]
+    },
+    {
+      "id": "user-simran",
+      "name": "Simran Rana",
+      "email": "simran.rana@hiet.co.in",
+      "passwordHash": "",
+      "campus": "HIET Shahpur (HPTU)",
+      "department": "Computer Science & Engineering",
+      "graduationYear": "2027",
+      "headline": "Frontend & UI/UX Specialist | Next.js, React, Tailwind CSS, Design Systems",
+      "bio": "Crafting the 1-of-1 Apple/Dibs-inspired design system for V-Link. Focused on accessible, fluid micro-interactions and student-first usability.",
+      "targetRole": "Frontend Engineer",
+      "verifiedCampusBadge": true,
+      "avatarColor": "#EC4899",
+      "education": "B.Tech in Computer Science & Engineering, HIET Shahpur (HPTU) \u00b7 2023\u20132027",
+      "skills": [
+        {
+          "name": "React",
+          "level": 90,
+          "verified": true,
+          "endorsements": 3,
+          "endorsedBy": [
+            "user-archit",
+            "user-deepika"
+          ]
+        },
+        {
+          "name": "Tailwind CSS",
+          "level": 94,
+          "verified": true,
+          "endorsements": 3,
+          "endorsedBy": [
+            "user-archit",
+            "user-tarun"
+          ]
+        },
+        {
+          "name": "Next.js",
+          "level": 86,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "Figma & UI/UX",
+          "level": 88,
+          "verified": true,
+          "endorsements": 2,
+          "endorsedBy": [
+            "user-deepika"
+          ]
+        },
+        {
+          "name": "TypeScript",
+          "level": 82,
+          "verified": false,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        },
+        {
+          "name": "Accessibility",
+          "level": 84,
+          "verified": true,
+          "endorsements": 1,
+          "endorsedBy": [
+            "user-archit"
+          ]
+        }
+      ],
+      "projects": [
+        {
+          "id": "proj-dibs-ui",
+          "title": "V-Link Dibs-Grade Design System",
+          "description": "Modern squircle layout, floating dynamic HUD capsule, interactive skill radars, and accessible color hierarchy.",
+          "techStack": [
+            "Next.js 15",
+            "Tailwind CSS",
+            "Framer Motion",
+            "Lucide"
+          ],
+          "repoUrl": "https://github.com/hiet-cse/vlink-ui-system"
+        },
+        {
+          "id": "proj-ats-export",
+          "title": "Interactive Resume Builder & PDF Formatter",
+          "description": "Real-time ATS preview engine with instant markdown export and one-click recruiter formatting.",
+          "techStack": [
+            "React",
+            "TypeScript",
+            "CSS Grid"
+          ]
+        }
+      ],
+      "interests": [
+        "UI/UX Architecture",
+        "Design Systems",
+        "Accessible Web",
+        "Motion Graphics"
+      ],
+      "readinessScore": 83,
+      "readinessTier": "Industry Ready",
+      "readinessDimensions": {
+        "Core Skills": 88,
+        "Diagnostic": 82,
+        "Projects": 85,
+        "Certifications": 78,
+        "Verification": 80,
+        "Coverage": 82
+      },
+      "connections": [
+        "user-archit",
+        "user-tarun",
+        "user-deepika"
+      ],
+      "following": [
+        "user-archit",
+        "user-tarun",
+        "user-deepika"
+      ],
+      "followedCompanies": [
+        "comp-microsoft",
+        "comp-google"
+      ],
+      "joinedGroups": [
+        "grp-hiet-cse",
+        "grp-ui-ux"
+      ]
+    }
+  ],
+  "posts": [
+    {
+      "id": "post-1",
+      "authorId": "user-archit",
+      "type": "project",
+      "title": "V-Link : Vision LINK is Live for HIET Shahpur & HPTU!",
+      "content": "Proud to showcase V-Link \u2014 the all-in-one student ecosystem uniting verified campus networking, real-time skill readiness diagnostics, and AI-guided career acceleration. Built with Next.js 15, Tailwind CSS, Python FastAPI, and AWS Cloud Architecture.",
+      "projectRef": {
+        "title": "V-Link Platform Core",
+        "techStack": [
+          "Next.js 15",
+          "TypeScript",
+          "Tailwind",
+          "FastAPI",
+          "AWS"
+        ],
+        "repoUrl": "https://github.com/hiet-cse/vlink-platform"
+      },
+      "groupId": "grp-hiet-cse",
+      "tags": [
+        "VLink",
+        "Nextjs15",
+        "HIETShahpur",
+        "StudentTech",
+        "FullStack"
+      ],
+      "likes": [
+        "user-tarun",
+        "user-deepika",
+        "user-simran"
+      ],
+      "reposts": [
+        "user-tarun",
+        "user-simran"
+      ],
+      "comments": [
+        {
+          "id": "cmt-101",
+          "authorId": "user-tarun",
+          "authorName": "Tarun Kashyap",
+          "authorHeadline": "Cloud & DevOps Architect",
+          "content": "AWS AppSync and serverless backend pipelines are humming smoothly. Zero-downtime microservice architecture ready for production!",
+          "createdAt": "2026-11-18T19:00:40Z"
+        },
+        {
+          "id": "cmt-102",
+          "authorId": "user-deepika",
+          "authorName": "Deepika",
+          "authorHeadline": "AI/ML & NLP Engineer",
+          "content": "The AI diagnostic radar and roadmap generator are returning sub-100ms benchmark responses. Brilliant milestone for our team!",
+          "createdAt": "2026-11-18T21:00:40Z"
+        }
+      ],
+      "createdAt": "2026-11-18T13:00:40Z"
+    },
+    {
+      "id": "post-2",
+      "authorId": "user-tarun",
+      "type": "post",
+      "title": "Cloud Infrastructure & AWS Deployment Blueprints for Campus Scale",
+      "content": "Just finalized our AWS SAM templates, containerized FastAPI deployment, and DynamoDB single-table design for V-Link. The architecture ensures sub-second latency across college placement drives and hackathons.",
+      "groupId": "grp-cloud-devops",
+      "tags": [
+        "AWS",
+        "DevOps",
+        "Serverless",
+        "DynamoDB",
+        "Docker"
+      ],
+      "likes": [
+        "user-archit",
+        "user-deepika"
+      ],
+      "reposts": [
+        "user-archit"
+      ],
+      "comments": [
+        {
+          "id": "cmt-201",
+          "authorId": "user-archit",
+          "authorName": "Archit Sharma",
+          "authorHeadline": "Full-Stack & Cloud Builder",
+          "content": "Clean isolation between our frontend Next.js nodes and the AI microservice makes local testing and cloud scaling seamless.",
+          "createdAt": "2026-11-18T17:00:40Z"
+        }
+      ],
+      "createdAt": "2026-11-18T09:00:40Z"
+    },
+    {
+      "id": "post-3",
+      "authorId": "user-deepika",
+      "type": "article",
+      "title": "How V-Link Combines Deterministic Scoring with AI Skill Roadmaps",
+      "content": "Unlike generic career portals that offer vague feedback, V-Link evaluates 6 tangible dimensions: Core Skills, Diagnostic Benchmarks, Verified Projects, Certifications, Peer Endorsements, and Syllabus Coverage. Here is how our Python engine closes the student preparation gap.",
+      "groupId": "grp-ai-lab",
+      "tags": [
+        "ArtificialIntelligence",
+        "MachineLearning",
+        "CareerTech",
+        "FastAPI",
+        "Python"
+      ],
+      "likes": [
+        "user-archit",
+        "user-simran",
+        "user-tarun"
+      ],
+      "reposts": [
+        "user-simran"
+      ],
+      "comments": [
+        {
+          "id": "cmt-301",
+          "authorId": "user-simran",
+          "authorName": "Simran Rana",
+          "authorHeadline": "Frontend & UI/UX Specialist",
+          "content": "Visualizing these dimensions via SVG radar charts gives students an immediate, actionable snapshot of what to study next!",
+          "createdAt": "2026-11-18T15:00:40Z"
+        }
+      ],
+      "createdAt": "2026-11-18T01:00:40Z"
+    },
+    {
+      "id": "post-4",
+      "authorId": "user-simran",
+      "type": "project",
+      "title": "Unveiling V-Link Dibs UI: A 1-of-1 Squircle Design Language",
+      "content": "Redesigned V-Link with warm canvas tones (#F8F9FD), tactile squircle cards (rounded-[28px]), floating dynamic island capsules, and vibrant sunset coral accents (#FF5B37). Crafting student software that looks and feels like consumer-grade Apple perfection.",
+      "projectRef": {
+        "title": "Dibs Design System Kit",
+        "techStack": [
+          "Tailwind CSS",
+          "React",
+          "Framer Motion",
+          "Lucide"
+        ],
+        "repoUrl": "https://github.com/hiet-cse/vlink-ui-system"
+      },
+      "groupId": "grp-ui-ux",
+      "tags": [
+        "UIUX",
+        "DesignSystem",
+        "TailwindCSS",
+        "AppleDesign",
+        "CleanTech"
+      ],
+      "likes": [
+        "user-archit",
+        "user-tarun",
+        "user-deepika"
+      ],
+      "reposts": [
+        "user-archit",
+        "user-deepika"
+      ],
+      "comments": [
+        {
+          "id": "cmt-401",
+          "authorId": "user-archit",
+          "authorName": "Archit Sharma",
+          "authorHeadline": "Full-Stack & Cloud Builder",
+          "content": "The alignment, typography contrast, and quick Ask V-Link drawer make the app experience top-tier!",
+          "createdAt": "2026-11-18T23:00:40Z"
+        }
+      ],
+      "createdAt": "2026-11-17T01:00:40Z"
+    }
+  ],
+  "groups": [
+    {
+      "id": "grp-hiet-cse",
+      "name": "HIET Shahpur CSE Department",
+      "category": "Campus",
+      "campus": "HIET Shahpur (HPTU)",
+      "description": "Official collaborative hub for Computer Science & Engineering students, project showcases, and department announcements.",
+      "memberIds": [
+        "user-archit",
+        "user-tarun",
+        "user-deepika",
+        "user-simran"
+      ]
+    },
+    {
+      "id": "grp-cloud-devops",
+      "name": "AWS & Cloud DevOps Guild",
+      "category": "Technology",
+      "campus": "HIET Shahpur (HPTU)",
+      "description": "Exploring serverless compute, microservice deployments, Docker containers, and cloud certifications.",
+      "memberIds": [
+        "user-archit",
+        "user-tarun"
+      ]
+    },
+    {
+      "id": "grp-ai-lab",
+      "name": "AI & Applied Machine Learning Lab",
+      "category": "Builders",
+      "campus": "HIET Shahpur (HPTU)",
+      "description": "Hands-on research group prototyping NLP models, recommender algorithms, and diagnostic evaluations.",
+      "memberIds": [
+        "user-archit",
+        "user-deepika"
+      ]
+    },
+    {
+      "id": "grp-ui-ux",
+      "name": "Design Systems & Frontend Crafts",
+      "category": "Technology",
+      "campus": "HIET Shahpur (HPTU)",
+      "description": "Dedicated to pixel-perfect layouts, responsive design, micro-interactions, and accessible web standards.",
+      "memberIds": [
+        "user-archit",
+        "user-simran"
+      ]
+    }
+  ],
+  "conversations": [
+    {
+      "id": "conv-core-team",
+      "title": "V-Link Core Engineering Team",
+      "isGroup": true,
+      "participantIds": [
+        "user-archit",
+        "user-tarun",
+        "user-deepika",
+        "user-simran"
+      ],
+      "updatedAt": "2026-11-19T00:00:40Z",
+      "messages": [
+        {
+          "id": "msg-1",
+          "senderId": "user-archit",
+          "senderName": "Archit Sharma",
+          "content": "Team, V-Link Next.js 15 frontend and Python AI engine are completely synchronized!",
+          "createdAt": "2026-11-18T20:00:40Z"
+        },
+        {
+          "id": "msg-2",
+          "senderId": "user-tarun",
+          "senderName": "Tarun Kashyap",
+          "content": "Cloud deployment blueprints and SAM templates are validated. Clean microservice separation verified.",
+          "createdAt": "2026-11-18T21:00:40Z"
+        },
+        {
+          "id": "msg-3",
+          "senderId": "user-deepika",
+          "senderName": "Deepika",
+          "content": "All 5 diagnostic test suites passed with 100% coverage. Skill gap recommendations are razor sharp.",
+          "createdAt": "2026-11-18T22:00:40Z"
+        },
+        {
+          "id": "msg-4",
+          "senderId": "user-simran",
+          "senderName": "Simran Rana",
+          "content": "Dibs-inspired squircle cards, crisp coral pill buttons, and responsive dynamic capsule look incredible!",
+          "createdAt": "2026-11-19T00:00:40Z"
+        }
+      ]
+    },
+    {
+      "id": "conv-archit-tarun",
+      "isGroup": false,
+      "participantIds": [
+        "user-archit",
+        "user-tarun"
+      ],
+      "updatedAt": "2026-11-18T22:00:40Z",
+      "messages": [
+        {
+          "id": "msg-5",
+          "senderId": "user-archit",
+          "senderName": "Archit Sharma",
+          "content": "Hey Tarun, let us ensure the DynamoDB indices mirror the 11 entities in Section 5.3 of our synopsis.",
+          "createdAt": "2026-11-18T17:00:40Z"
+        },
+        {
+          "id": "msg-6",
+          "senderId": "user-tarun",
+          "senderName": "Tarun Kashyap",
+          "content": "Done! Single-table design has PKs and SKs mapped perfectly to our schema.",
+          "createdAt": "2026-11-18T22:00:40Z"
+        }
+      ]
+    },
+    {
+      "id": "conv-archit-deepika",
+      "isGroup": false,
+      "participantIds": [
+        "user-archit",
+        "user-deepika"
+      ],
+      "updatedAt": "2026-11-18T23:00:40Z",
+      "messages": [
+        {
+          "id": "msg-7",
+          "senderId": "user-deepika",
+          "senderName": "Deepika",
+          "content": "Archit, the ATS keyword scanner now evaluates both exact skills and semantic category matches.",
+          "createdAt": "2026-11-18T21:00:40Z"
+        },
+        {
+          "id": "msg-8",
+          "senderId": "user-archit",
+          "senderName": "Archit Sharma",
+          "content": "Fantastic work! That matches Section 8.4 diagnostic requirements directly.",
+          "createdAt": "2026-11-18T23:00:40Z"
+        }
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "id": "comp-aws",
+      "name": "AWS India (Cloud Systems)",
+      "industry": "Cloud Computing & DevOps",
+      "location": "Bangalore / Hyderabad / Remote",
+      "size": "10,000+ Employees",
+      "website": "https://aws.amazon.com",
+      "description": "Global leader in cloud compute, serverless architectures, and distributed systems tooling.",
+      "verified": true,
+      "followerIds": [
+        "user-archit",
+        "user-tarun"
+      ]
+    },
+    {
+      "id": "comp-google",
+      "name": "Google Cloud India",
+      "industry": "AI & Enterprise Cloud",
+      "location": "Bangalore / Gurgaon / Remote",
+      "size": "10,000+ Employees",
+      "website": "https://cloud.google.com",
+      "description": "Pioneering state-of-the-art machine learning, planetary-scale databases, and developer platforms.",
+      "verified": true,
+      "followerIds": [
+        "user-archit",
+        "user-deepika",
+        "user-simran"
+      ]
+    },
+    {
+      "id": "comp-microsoft",
+      "name": "Microsoft India (IDC)",
+      "industry": "Software & Developer Tools",
+      "location": "Noida / Hyderabad / Remote",
+      "size": "10,000+ Employees",
+      "website": "https://www.microsoft.com",
+      "description": "Building modern productivity, Azure cloud runtimes, and developer-first frameworks (TypeScript, VS Code).",
+      "verified": true,
+      "followerIds": [
+        "user-archit",
+        "user-simran"
+      ]
+    },
+    {
+      "id": "comp-tcs-labs",
+      "name": "TCS Research & Innovation Labs",
+      "industry": "Industrial Research & R&D",
+      "location": "Delhi NCR / Pune",
+      "size": "10,000+ Employees",
+      "website": "https://www.tcs.com/research",
+      "description": "Advancing academic-industry applied research across systems, security, and algorithmic intelligence.",
+      "verified": true,
+      "followerIds": [
+        "user-tarun",
+        "user-deepika"
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "companyId": "comp-aws",
+      "companyName": "AWS India",
+      "title": "Cloud Infrastructure & DevOps Engineer (Campus 2027)",
+      "roleType": "Full-Time",
+      "location": "Bangalore / Hybrid",
+      "remote": true,
+      "stipendOrSalary": "\u20b918,00,000 - \u20b924,00,000 / year",
+      "requiredSkills": [
+        "AWS",
+        "Docker",
+        "Python",
+        "CI/CD",
+        "Linux"
+      ],
+      "description": "Join AWS India to architect high-throughput serverless applications, automate CI/CD pipelines, and optimize container clusters for enterprise scale.",
+      "postedAt": "2026-11-17T01:01:22Z"
+    },
+    {
+      "id": "job-2",
+      "companyId": "comp-google",
+      "companyName": "Google Cloud India",
+      "title": "Associate AI/ML Solutions Engineer",
+      "roleType": "Full-Time",
+      "location": "Bangalore / Remote",
+      "remote": true,
+      "stipendOrSalary": "\u20b920,00,000 - \u20b926,00,000 / year",
+      "requiredSkills": [
+        "Python",
+        "Machine Learning",
+        "FastAPI",
+        "PyTorch",
+        "NLP"
+      ],
+      "description": "Build and evaluate cutting-edge NLP and semantic matching services. Partner with engineering leads to deploy scalable machine learning APIs.",
+      "postedAt": "2026-11-16T01:01:22Z"
+    },
+    {
+      "id": "job-3",
+      "companyId": "comp-microsoft",
+      "companyName": "Microsoft India (IDC)",
+      "title": "Full-Stack Software Engineer (Next.js & Cloud)",
+      "roleType": "Full-Time",
+      "location": "Noida / Hybrid",
+      "remote": false,
+      "stipendOrSalary": "\u20b919,00,000 - \u20b925,00,000 / year",
+      "requiredSkills": [
+        "TypeScript",
+        "Next.js",
+        "React",
+        "AWS",
+        "System Design"
+      ],
+      "description": "Build consumer-facing, highly performant web products using TypeScript, modern React architectures, and distributed backend endpoints.",
+      "postedAt": "2026-11-18T01:01:22Z"
+    },
+    {
+      "id": "job-4",
+      "companyId": "comp-microsoft",
+      "companyName": "Microsoft India (IDC)",
+      "title": "Design Systems & Frontend Engineering Intern",
+      "roleType": "Internship",
+      "location": "Hyderabad / Remote",
+      "remote": true,
+      "stipendOrSalary": "\u20b975,000 / month",
+      "requiredSkills": [
+        "React",
+        "Tailwind CSS",
+        "TypeScript",
+        "Accessibility",
+        "Figma & UI/UX"
+      ],
+      "description": "Craft fluid, accessible design systems and component libraries with obsessive attention to micro-interactions, responsive grids, and clean design.",
+      "postedAt": "2026-11-15T01:01:22Z"
+    }
+  ],
+  "applications": [
+    {
+      "id": "app-1",
+      "userId": "user-archit",
+      "jobId": "job-3",
+      "status": "interview",
+      "matchScore": 92,
+      "coverNote": "Lead architect of V-Link with deep proficiency in TypeScript, Next.js 15, and distributed cloud microservices.",
+      "appliedAt": "2026-11-16T01:01:22Z",
+      "updatedAt": "2026-11-18T01:01:22Z"
+    },
+    {
+      "id": "app-2",
+      "userId": "user-tarun",
+      "jobId": "job-1",
+      "status": "shortlisted",
+      "matchScore": 90,
+      "coverNote": "Certified AWS specialist with hands-on experience designing SAM serverless templates and automated CI/CD workflows.",
+      "appliedAt": "2026-11-15T01:01:22Z",
+      "updatedAt": "2026-11-17T01:01:22Z"
+    },
+    {
+      "id": "app-3",
+      "userId": "user-deepika",
+      "jobId": "job-2",
+      "status": "interview",
+      "matchScore": 94,
+      "coverNote": "Developer of the V-Link FastAPI diagnostic evaluation engine with proven PyTorch and NLP pipeline expertise.",
+      "appliedAt": "2026-11-16T01:01:22Z",
+      "updatedAt": "2026-11-18T01:01:22Z"
+    },
+    {
+      "id": "app-4",
+      "userId": "user-simran",
+      "jobId": "job-4",
+      "status": "shortlisted",
+      "matchScore": 95,
+      "coverNote": "Creator of the Dibs-grade design system for V-Link, focusing on squircle card ergonomics and accessible interactions.",
+      "appliedAt": "2026-11-15T01:01:22Z",
+      "updatedAt": "2026-11-17T01:01:22Z"
+    }
+  ],
+  "roadmaps": [
+    {
+      "userId": "user-archit",
+      "targetRole": "Full-Stack Software Engineer",
+      "estimatedWeeks": 8,
+      "updatedAt": "2026-11-18T01:01:22Z",
+      "milestones": [
+        {
+          "id": "ms-1",
+          "phase": "Phase 1: Architecture & Serverless APIs",
+          "title": "Modular API Gateway & Type Safety",
+          "description": "Implement end-to-end type validation using TypeScript, Zod, and Next.js 15 Route Handlers.",
+          "skills_covered": [
+            "TypeScript",
+            "Next.js",
+            "REST APIs"
+          ],
+          "estimated_hours": 24,
+          "resources": [
+            {
+              "title": "Next.js 15 Server Components Guide",
+              "url": "https://nextjs.org/docs"
+            },
+            {
+              "title": "TypeScript Deep Dive",
+              "url": "https://basarat.gitbook.io"
+            }
+          ],
+          "deliverable": "Validated RESTful API endpoints with schema enforcement.",
+          "completed": true
+        },
+        {
+          "id": "ms-2",
+          "phase": "Phase 2: Cloud Infrastructure & Resilience",
+          "title": "AWS CloudFront, AppSync & DynamoDB Integration",
+          "description": "Provision serverless backend data stores with global caching and optimistic concurrency control.",
+          "skills_covered": [
+            "AWS",
+            "DynamoDB",
+            "System Design"
+          ],
+          "estimated_hours": 30,
+          "resources": [
+            {
+              "title": "AWS Serverless Multi-Tier Patterns",
+              "url": "https://aws.amazon.com/serverless"
+            }
+          ],
+          "deliverable": "Benchmarked cloud architecture handling 10,000 requests/min.",
+          "completed": true
+        },
+        {
+          "id": "ms-3",
+          "phase": "Phase 3: Production Hardening & Telemetry",
+          "title": "OpenTelemetry Tracing & Commercial Security Auditing",
+          "description": "Add distributed trace correlation, rate limiting, and GDPR-compliant student privacy policies.",
+          "skills_covered": [
+            "Security",
+            "Observability",
+            "CI/CD"
+          ],
+          "estimated_hours": 20,
+          "resources": [
+            {
+              "title": "OWASP Web Top 10 Security Checklist",
+              "url": "https://owasp.org"
+            }
+          ],
+          "deliverable": "Clean security scan with zero critical vulnerabilities.",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "userId": "user-tarun",
+      "targetRole": "Cloud & DevOps Engineer",
+      "estimatedWeeks": 6,
+      "updatedAt": "2026-11-17T01:01:22Z",
+      "milestones": [
+        {
+          "id": "ms-t1",
+          "phase": "Phase 1: Containers & Orchestration",
+          "title": "Multi-Stage Docker Builds & Kubernetes Manifests",
+          "description": "Optimize container size under 120MB and deploy Helm charts for local testing.",
+          "skills_covered": [
+            "Docker",
+            "Kubernetes",
+            "Linux"
+          ],
+          "estimated_hours": 25,
+          "resources": [
+            {
+              "title": "Docker Best Practices for Production",
+              "url": "https://docs.docker.com"
+            }
+          ],
+          "deliverable": "Lightweight production Docker images with health probes.",
+          "completed": true
+        },
+        {
+          "id": "ms-t2",
+          "phase": "Phase 2: Infrastructure as Code",
+          "title": "Terraform & AWS SAM Cloud Automation",
+          "description": "Automate multi-region VPC, AppSync GraphQL, and DynamoDB provisioning.",
+          "skills_covered": [
+            "AWS",
+            "CI/CD",
+            "IaC"
+          ],
+          "estimated_hours": 28,
+          "resources": [
+            {
+              "title": "Terraform AWS Provider Docs",
+              "url": "https://registry.terraform.io"
+            }
+          ],
+          "deliverable": "1-click deployment script with rollback safeguards.",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "userId": "user-deepika",
+      "targetRole": "AI/ML Engineer",
+      "estimatedWeeks": 8,
+      "updatedAt": "2026-11-18T01:01:22Z",
+      "milestones": [
+        {
+          "id": "ms-d1",
+          "phase": "Phase 1: Diagnostic Algorithms",
+          "title": "Deterministic Radar Dimension Formulator",
+          "description": "Formulate weighted 6-dimension evaluation matrix mapping student skills to industry targets.",
+          "skills_covered": [
+            "Python",
+            "Machine Learning",
+            "FastAPI"
+          ],
+          "estimated_hours": 22,
+          "resources": [
+            {
+              "title": "Scikit-Learn Preprocessing",
+              "url": "https://scikit-learn.org"
+            }
+          ],
+          "deliverable": "Sub-50ms diagnostic calculation module.",
+          "completed": true
+        },
+        {
+          "id": "ms-d2",
+          "phase": "Phase 2: Semantic Matching & Embeddings",
+          "title": "Sentence Transformer Resume-JD Vector Matching",
+          "description": "Implement high-precision cosine similarity vector search over job description requirements.",
+          "skills_covered": [
+            "NLP",
+            "PyTorch",
+            "Python"
+          ],
+          "estimated_hours": 32,
+          "resources": [
+            {
+              "title": "Sentence Transformers Guide",
+              "url": "https://sbert.net"
+            }
+          ],
+          "deliverable": "Quantized ONNX model running with 94% precision.",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "userId": "user-simran",
+      "targetRole": "Frontend Engineer",
+      "estimatedWeeks": 6,
+      "updatedAt": "2026-11-17T01:01:22Z",
+      "milestones": [
+        {
+          "id": "ms-s1",
+          "phase": "Phase 1: Design Tokens & Squircle Grids",
+          "title": "Dibs UI System Specification",
+          "description": "Define warm canvas tokens, squircle card radii, and responsive layout constraints.",
+          "skills_covered": [
+            "React",
+            "Tailwind CSS",
+            "UI/UX"
+          ],
+          "estimated_hours": 20,
+          "resources": [
+            {
+              "title": "Apple Human Interface Guidelines",
+              "url": "https://developer.apple.com/design/"
+            }
+          ],
+          "deliverable": "Modular component kit with 0 layout shift.",
+          "completed": true
+        },
+        {
+          "id": "ms-s2",
+          "phase": "Phase 2: Fluid Micro-Interactions & A11y",
+          "title": "Interactive Dynamic Capsule & Keyboard Controls",
+          "description": "Implement \u2318K command palette, accessible modal traps, and spring transitions.",
+          "skills_covered": [
+            "Accessibility",
+            "TypeScript",
+            "Next.js"
+          ],
+          "estimated_hours": 26,
+          "resources": [
+            {
+              "title": "W3C Web Accessibility Guidelines (WCAG)",
+              "url": "https://www.w3.org/WAI/"
+            }
+          ],
+          "deliverable": "100/100 Lighthouse accessibility audit score.",
+          "completed": false
+        }
+      ]
+    }
+  ],
+  "certifications": [
+    {
+      "id": "cert-1",
+      "title": "AWS Certified Cloud Practitioner",
+      "provider": "Amazon Web Services",
+      "category": "Cloud & DevOps",
+      "duration": "20 hours",
+      "url": "https://aws.amazon.com/certification/certified-cloud-practitioner/",
+      "skills": [
+        "AWS",
+        "Cloud Architecture",
+        "Security"
+      ],
+      "isFree": false
+    },
+    {
+      "id": "cert-2",
+      "title": "Meta Front-End Developer Professional Certificate",
+      "provider": "Meta / Coursera",
+      "category": "Frontend Development",
+      "duration": "40 hours",
+      "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
+      "skills": [
+        "React",
+        "JavaScript",
+        "CSS",
+        "UI/UX"
+      ],
+      "isFree": false
+    },
+    {
+      "id": "cert-3",
+      "title": "DeepLearning.AI Machine Learning Specialization",
+      "provider": "DeepLearning.AI & Stanford",
+      "category": "AI & Machine Learning",
+      "duration": "35 hours",
+      "url": "https://www.coursera.org/specializations/machine-learning-introduction",
+      "skills": [
+        "Python",
+        "Machine Learning",
+        "PyTorch"
+      ],
+      "isFree": false
+    },
+    {
+      "id": "cert-4",
+      "title": "freeCodeCamp Full-Stack Developer Certification",
+      "provider": "freeCodeCamp",
+      "category": "Full-Stack Software",
+      "duration": "300 hours",
+      "url": "https://www.freecodecamp.org",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Node.js",
+        "SQL"
+      ],
+      "isFree": true
+    }
+  ],
+  "certProgress": [
+    {
+      "userId": "user-archit",
+      "certId": "cert-1",
+      "progress": 100,
+      "completed": true,
+      "updatedAt": "2026-11-14T01:01:22Z"
+    },
+    {
+      "userId": "user-archit",
+      "certId": "cert-4",
+      "progress": 100,
+      "completed": true,
+      "updatedAt": "2026-11-09T01:01:22Z"
+    },
+    {
+      "userId": "user-tarun",
+      "certId": "cert-1",
+      "progress": 100,
+      "completed": true,
+      "updatedAt": "2026-11-11T01:01:22Z"
+    },
+    {
+      "userId": "user-deepika",
+      "certId": "cert-3",
+      "progress": 100,
+      "completed": true,
+      "updatedAt": "2026-11-07T01:01:22Z"
+    },
+    {
+      "userId": "user-simran",
+      "certId": "cert-2",
+      "progress": 100,
+      "completed": true,
+      "updatedAt": "2026-11-13T01:01:22Z"
+    }
+  ],
+  "assessments": [
+    {
+      "id": "asmt-1",
+      "userId": "user-archit",
+      "targetRole": "Full-Stack Software Engineer",
+      "overallScore": 84,
+      "tier": "Industry Ready",
+      "dimensions": {
+        "Core Skills": 88,
+        "Diagnostic": 85,
+        "Projects": 88,
+        "Certifications": 80,
+        "Verification": 82,
+        "Coverage": 78
+      },
+      "missingCoreSkills": [
+        "Microservices Security",
+        "OpenTelemetry"
+      ],
+      "recommendations": [
+        "Complete distributed tracing lab with OpenTelemetry and Jaeger.",
+        "Deploy end-to-end integration test suite with synthetic traffic simulation."
+      ],
+      "completedAt": "2026-11-18T01:01:22Z"
+    },
+    {
+      "id": "asmt-2",
+      "userId": "user-tarun",
+      "targetRole": "Cloud & DevOps Engineer",
+      "overallScore": 82,
+      "tier": "Industry Ready",
+      "dimensions": {
+        "Core Skills": 86,
+        "Diagnostic": 82,
+        "Projects": 84,
+        "Certifications": 85,
+        "Verification": 78,
+        "Coverage": 75
+      },
+      "missingCoreSkills": [
+        "Terraform Drift Detection",
+        "Zero-Trust Networking"
+      ],
+      "recommendations": [
+        "Configure automated AWS CloudWatch metric alarms for lambda throttles.",
+        "Run chaos engineering drill simulating regional endpoint failover."
+      ],
+      "completedAt": "2026-11-17T01:01:22Z"
+    },
+    {
+      "id": "asmt-3",
+      "userId": "user-deepika",
+      "targetRole": "AI/ML Engineer",
+      "overallScore": 85,
+      "tier": "Industry Ready",
+      "dimensions": {
+        "Core Skills": 90,
+        "Diagnostic": 88,
+        "Projects": 85,
+        "Certifications": 82,
+        "Verification": 80,
+        "Coverage": 82
+      },
+      "missingCoreSkills": [
+        "Vector Embeddings Database (Pinecone/Milvus)"
+      ],
+      "recommendations": [
+        "Benchmark sentence transformer embeddings against raw TF-IDF for resume-JD matching.",
+        "Deploy quantized ONNX model for sub-20ms inference latency."
+      ],
+      "completedAt": "2026-11-18T01:01:22Z"
+    },
+    {
+      "id": "asmt-4",
+      "userId": "user-simran",
+      "targetRole": "Frontend Engineer",
+      "overallScore": 83,
+      "tier": "Industry Ready",
+      "dimensions": {
+        "Core Skills": 88,
+        "Diagnostic": 82,
+        "Projects": 85,
+        "Certifications": 78,
+        "Verification": 80,
+        "Coverage": 82
+      },
+      "missingCoreSkills": [
+        "Web Vitals CLS/LCP Optimization",
+        "Service Workers"
+      ],
+      "recommendations": [
+        "Audit client-side bundle size with Next.js bundle analyzer.",
+        "Ensure 100/100 Lighthouse accessibility compliance across dark/light contrast ratios."
+      ],
+      "completedAt": "2026-11-17T01:01:22Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-1",
+      "userId": "user-archit",
+      "category": "endorsement",
+      "title": "Skill Endorsement Received",
+      "body": "Tarun Kashyap endorsed you for AWS and System Design.",
+      "read": false,
+      "link": "/profile",
+      "createdAt": "2026-11-18T23:01:22Z"
+    },
+    {
+      "id": "notif-2",
+      "userId": "user-archit",
+      "category": "application",
+      "title": "Application Status Update",
+      "body": "Microsoft India (IDC) moved your Full-Stack Engineer application to Interview Round.",
+      "read": false,
+      "link": "/jobs",
+      "createdAt": "2026-11-18T20:01:22Z"
+    },
+    {
+      "id": "notif-3",
+      "userId": "user-tarun",
+      "category": "application",
+      "title": "Application Shortlisted",
+      "body": "AWS India shortlisted your profile for the Cloud & DevOps role.",
+      "read": false,
+      "link": "/jobs",
+      "createdAt": "2026-11-18T19:01:22Z"
+    },
+    {
+      "id": "notif-4",
+      "userId": "user-deepika",
+      "category": "milestone",
+      "title": "AI Service Milestone Reached",
+      "body": "Your resume semantic scoring engine achieved 94% accuracy.",
+      "read": true,
+      "link": "/readiness",
+      "createdAt": "2026-11-18T01:01:22Z"
+    },
+    {
+      "id": "notif-5",
+      "userId": "user-simran",
+      "category": "endorsement",
+      "title": "Skill Endorsement Received",
+      "body": "Archit Sharma endorsed you for Next.js and Tailwind CSS.",
+      "read": false,
+      "link": "/profile",
+      "createdAt": "2026-11-18T22:01:22Z"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: V-Link (Vision LINK) Serverless AWS Infrastructure Blueprint (Cognito, DynamoDB, S3, CloudFront, Lambda)
+
+Resources:
+  VLinkUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: vlink-student-pool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+
+  VLinkUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: vlink-nextjs-client
+      UserPoolId: !Ref VLinkUserPool
+      GenerateSecret: false
+
+  VLinkMediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "vlink-media-${AWS::AccountId}"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: ["*"]
+            AllowedHeaders: ["*"]
+
+  VLinkCoreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: VLinkCore
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  VLinkApiLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: nodejs20.x
+      Handler: index.handler
+      InlineCode: |
+        exports.handler = async (event) => ({
+          statusCode: 200,
+          body: JSON.stringify({ service: "vlink-api-lambda", event })
+        });
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref VLinkCoreTable
+        - S3CrudPolicy:
+            BucketName: !Ref VLinkMediaBucket

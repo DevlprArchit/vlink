@@ -1,0 +1,91 @@
+# AWS AppSync GraphQL Schema for V-Link : Vision LINK (Section 5)
+
+type SkillItem {
+  name: String!
+  level: Int!
+  verified: Boolean!
+  endorsements: Int!
+}
+
+type ProjectItem {
+  id: ID!
+  title: String!
+  description: String!
+  techStack: [String!]!
+  repoUrl: String
+  liveUrl: String
+}
+
+type StudentProfile {
+  id: ID!
+  name: String!
+  email: String!
+  campus: String!
+  headline: String!
+  targetRole: String!
+  verifiedCampusBadge: Boolean!
+  readinessScore: Int!
+  readinessTier: String!
+  skills: [SkillItem!]!
+  projects: [ProjectItem!]!
+}
+
+type Post {
+  id: ID!
+  authorId: ID!
+  type: String!
+  title: String
+  content: String!
+  imageUrl: String
+  groupId: ID
+  tags: [String!]!
+  likesCount: Int!
+  createdAt: AWSDateTime!
+}
+
+type Message {
+  id: ID!
+  conversationId: ID!
+  senderId: ID!
+  senderName: String!
+  content: String!
+  createdAt: AWSDateTime!
+}
+
+type JobPosting {
+  id: ID!
+  companyId: ID!
+  companyName: String!
+  title: String!
+  roleType: String!
+  location: String!
+  requiredSkills: [String!]!
+  description: String!
+}
+
+type Application {
+  id: ID!
+  userId: ID!
+  jobId: ID!
+  status: String!
+  matchScore: Int!
+  appliedAt: AWSDateTime!
+}
+
+type Query {
+  getProfile(id: ID!): StudentProfile
+  listFeed(groupId: ID, limit: Int): [Post!]!
+  listJobs(skill: String, location: String): [JobPosting!]!
+  listApplications(userId: ID!): [Application!]!
+}
+
+type Mutation {
+  createPost(type: String!, content: String!, imageUrl: String, groupId: ID): Post!
+  sendMessage(conversationId: ID!, content: String!): Message!
+  applyToJob(jobId: ID!): Application!
+}
+
+type Subscription {
+  onNewMessage(conversationId: ID!): Message
+    @aws_subscribe(mutations: ["sendMessage"])
+}
