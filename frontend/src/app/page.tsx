@@ -385,7 +385,7 @@ export default function HomeFeedPage() {
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
 
             {/* ── Modern Human Welcome Center ── */}
-      <section className="sense-card p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-6 border border-slate-200/80 bg-white">
+      <section className="sense-card p-4 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-6 border border-slate-200/80 bg-white">
         <div className="space-y-2 max-w-xl">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-[#4F46E5] border border-orange-200/70">

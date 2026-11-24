@@ -421,7 +421,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </button>
 
                   {notifOpen && (
-                    <div className="absolute right-0 top-full mt-2 z-50 w-80 sm:w-88 rounded-2xl border border-white/90 bg-white/90 shadow-2xl backdrop-blur-2xl p-2">
+                    <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-88 rounded-2xl border border-white/90 bg-white/95 shadow-2xl backdrop-blur-2xl p-2">
                       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">Alert Feed</span>
                         <div className="flex items-center gap-2">
@@ -561,7 +561,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </footer>
 
       {/* â”€â”€â”€ Mobile Bottom Nav (<768px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <nav className="fixed bottom-2 left-3 right-3 z-50 rounded-2xl border border-white/90 bg-white/85 backdrop-blur-2xl md:hidden no-print shadow-2xl p-1.5">
+      <nav className="fixed bottom-2 left-2 right-2 sm:left-3 sm:right-3 z-50 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-2xl md:hidden no-print shadow-xl p-1">
         <div className="flex items-stretch justify-around">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -570,12 +570,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex flex-1 flex-col items-center justify-center gap-1 py-1.5 text-[9px] font-semibold transition-all ${
-                  active ? "text-[#4F46E5] font-bold scale-105" : "text-slate-500 hover:text-slate-900"
+                className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[9px] font-semibold transition-all min-w-0 ${
+                  active ? "text-[#4F46E5] font-bold" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[#4F46E5]" : "text-slate-400"}`} />
-                <span>{item.label}</span>
+                <span className="truncate max-w-[44px] text-center leading-none">{item.label}</span>
               </Link>
             );
           })}
@@ -583,9 +583,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* ─── Floating "✦ V-Link AI Mentor" Real Conversational HUD ──── */}
-      <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 no-print flex flex-col items-end">
+      <div className="fixed bottom-16 md:bottom-6 right-2 sm:right-6 z-40 no-print flex flex-col items-end max-w-[calc(100vw-1rem)]">
         {copilotOpen && (
-          <div className="mb-3 w-[340px] sm:w-[420px] h-[520px] max-h-[82vh] flex flex-col card-dibs shadow-2xl border border-white/95 bg-white/95 backdrop-blur-3xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="mb-3 w-[calc(100vw-1rem)] sm:w-[420px] max-w-[420px] h-[480px] max-h-[75vh] flex flex-col card-dibs shadow-2xl border border-white/95 bg-white/95 backdrop-blur-3xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Copilot Header */}
             <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-slate-100 bg-white/60">
               <div className="flex items-center gap-2.5">
@@ -707,11 +707,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => setCopilotOpen(!copilotOpen)}
-          className="btn-dibs-primary flex items-center gap-2 px-4 py-2.5 shadow-2xl transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+          className="btn-dibs-primary flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm shadow-2xl transition-transform hover:scale-105 active:scale-95 cursor-pointer rounded-2xl"
         >
-          <Sparkles className="h-4 w-4" />
-          <span className="tracking-wide">✦ V-Link AI Mentor</span>
-          <span className="badge-mint py-0.5 px-1.5 text-[9px] uppercase tracking-wider">Live</span>
+          <Sparkles className="h-4 w-4 shrink-0" />
+          <span className="tracking-wide text-xs font-bold">✦ AI Mentor</span>
+          <span className="badge-mint py-0.5 px-1.5 text-[9px] uppercase tracking-wider hidden sm:inline-block">Live</span>
         </button>
       </div>
 

@@ -4,7 +4,7 @@
       "id": "user-archit",
       "name": "Archit Sharma",
       "email": "archit.sharma@hiet.co.in",
-      "passwordHash": "",
+      "passwordHash": "895aa8afb8948aa5aa06fc0733a25b8f29c0b456657f17d4f2825f9e6b7745f9",
       "campus": "HIET Shahpur (HPTU)",
       "department": "Computer Science & Engineering",
       "graduationYear": "2027",
@@ -147,7 +147,7 @@
       "id": "user-tarun",
       "name": "Tarun Kashyap",
       "email": "tarun.kashyap@hiet.co.in",
-      "passwordHash": "",
+      "passwordHash": "895aa8afb8948aa5aa06fc0733a25b8f29c0b456657f17d4f2825f9e6b7745f9",
       "campus": "HIET Shahpur (HPTU)",
       "department": "Computer Science & Engineering",
       "graduationYear": "2027",
@@ -278,7 +278,7 @@
       "id": "user-deepika",
       "name": "Deepika",
       "email": "deepika@hiet.co.in",
-      "passwordHash": "",
+      "passwordHash": "895aa8afb8948aa5aa06fc0733a25b8f29c0b456657f17d4f2825f9e6b7745f9",
       "campus": "HIET Shahpur (HPTU)",
       "department": "Computer Science & Engineering",
       "graduationYear": "2027",
@@ -410,7 +410,7 @@
       "id": "user-simran",
       "name": "Simran Rana",
       "email": "simran.rana@hiet.co.in",
-      "passwordHash": "",
+      "passwordHash": "895aa8afb8948aa5aa06fc0733a25b8f29c0b456657f17d4f2825f9e6b7745f9",
       "campus": "HIET Shahpur (HPTU)",
       "department": "Computer Science & Engineering",
       "graduationYear": "2027",
@@ -538,174 +538,7 @@
       ]
     }
   ],
-  "posts": [
-    {
-      "id": "post-1",
-      "authorId": "user-archit",
-      "type": "project",
-      "title": "V-Link : Vision LINK is Live for HIET Shahpur & HPTU!",
-      "content": "Proud to showcase V-Link \u2014 the all-in-one student ecosystem uniting verified campus networking, real-time skill readiness diagnostics, and AI-guided career acceleration. Built with Next.js 15, Tailwind CSS, Python FastAPI, and AWS Cloud Architecture.",
-      "projectRef": {
-        "title": "V-Link Platform Core",
-        "techStack": [
-          "Next.js 15",
-          "TypeScript",
-          "Tailwind",
-          "FastAPI",
-          "AWS"
-        ],
-        "repoUrl": "https://github.com/hiet-cse/vlink-platform"
-      },
-      "groupId": "grp-hiet-cse",
-      "tags": [
-        "VLink",
-        "Nextjs15",
-        "HIETShahpur",
-        "StudentTech",
-        "FullStack"
-      ],
-      "likes": [
-        "user-tarun",
-        "user-deepika",
-        "user-simran"
-      ],
-      "reposts": [
-        "user-tarun",
-        "user-simran"
-      ],
-      "comments": [
-        {
-          "id": "cmt-101",
-          "authorId": "user-tarun",
-          "authorName": "Tarun Kashyap",
-          "authorHeadline": "Cloud & DevOps Architect",
-          "content": "AWS AppSync and serverless backend pipelines are humming smoothly. Zero-downtime microservice architecture ready for production!",
-          "createdAt": "2026-11-18T19:00:40Z"
-        },
-        {
-          "id": "cmt-102",
-          "authorId": "user-deepika",
-          "authorName": "Deepika",
-          "authorHeadline": "AI/ML & NLP Engineer",
-          "content": "The AI diagnostic radar and roadmap generator are returning sub-100ms benchmark responses. Brilliant milestone for our team!",
-          "createdAt": "2026-11-18T21:00:40Z"
-        }
-      ],
-      "createdAt": "2026-11-18T13:00:40Z"
-    },
-    {
-      "id": "post-2",
-      "authorId": "user-tarun",
-      "type": "post",
-      "title": "Cloud Infrastructure & AWS Deployment Blueprints for Campus Scale",
-      "content": "Just finalized our AWS SAM templates, containerized FastAPI deployment, and DynamoDB single-table design for V-Link. The architecture ensures sub-second latency across college placement drives and hackathons.",
-      "groupId": "grp-cloud-devops",
-      "tags": [
-        "AWS",
-        "DevOps",
-        "Serverless",
-        "DynamoDB",
-        "Docker"
-      ],
-      "likes": [
-        "user-archit",
-        "user-deepika"
-      ],
-      "reposts": [
-        "user-archit"
-      ],
-      "comments": [
-        {
-          "id": "cmt-201",
-          "authorId": "user-archit",
-          "authorName": "Archit Sharma",
-          "authorHeadline": "Full-Stack & Cloud Builder",
-          "content": "Clean isolation between our frontend Next.js nodes and the AI microservice makes local testing and cloud scaling seamless.",
-          "createdAt": "2026-11-18T17:00:40Z"
-        }
-      ],
-      "createdAt": "2026-11-18T09:00:40Z"
-    },
-    {
-      "id": "post-3",
-      "authorId": "user-deepika",
-      "type": "article",
-      "title": "How V-Link Combines Deterministic Scoring with AI Skill Roadmaps",
-      "content": "Unlike generic career portals that offer vague feedback, V-Link evaluates 6 tangible dimensions: Core Skills, Diagnostic Benchmarks, Verified Projects, Certifications, Peer Endorsements, and Syllabus Coverage. Here is how our Python engine closes the student preparation gap.",
-      "groupId": "grp-ai-lab",
-      "tags": [
-        "ArtificialIntelligence",
-        "MachineLearning",
-        "CareerTech",
-        "FastAPI",
-        "Python"
-      ],
-      "likes": [
-        "user-archit",
-        "user-simran",
-        "user-tarun"
-      ],
-      "reposts": [
-        "user-simran"
-      ],
-      "comments": [
-        {
-          "id": "cmt-301",
-          "authorId": "user-simran",
-          "authorName": "Simran Rana",
-          "authorHeadline": "Frontend & UI/UX Specialist",
-          "content": "Visualizing these dimensions via SVG radar charts gives students an immediate, actionable snapshot of what to study next!",
-          "createdAt": "2026-11-18T15:00:40Z"
-        }
-      ],
-      "createdAt": "2026-11-18T01:00:40Z"
-    },
-    {
-      "id": "post-4",
-      "authorId": "user-simran",
-      "type": "project",
-      "title": "Unveiling V-Link Dibs UI: A 1-of-1 Squircle Design Language",
-      "content": "Redesigned V-Link with warm canvas tones (#F8F9FD), tactile squircle cards (rounded-[28px]), floating dynamic island capsules, and vibrant sunset coral accents (#FF5B37). Crafting student software that looks and feels like consumer-grade Apple perfection.",
-      "projectRef": {
-        "title": "Dibs Design System Kit",
-        "techStack": [
-          "Tailwind CSS",
-          "React",
-          "Framer Motion",
-          "Lucide"
-        ],
-        "repoUrl": "https://github.com/hiet-cse/vlink-ui-system"
-      },
-      "groupId": "grp-ui-ux",
-      "tags": [
-        "UIUX",
-        "DesignSystem",
-        "TailwindCSS",
-        "AppleDesign",
-        "CleanTech"
-      ],
-      "likes": [
-        "user-archit",
-        "user-tarun",
-        "user-deepika"
-      ],
-      "reposts": [
-        "user-archit",
-        "user-deepika"
-      ],
-      "comments": [
-        {
-          "id": "cmt-401",
-          "authorId": "user-archit",
-          "authorName": "Archit Sharma",
-          "authorHeadline": "Full-Stack & Cloud Builder",
-          "content": "The alignment, typography contrast, and quick Ask V-Link drawer make the app experience top-tier!",
-          "createdAt": "2026-11-18T23:00:40Z"
-        }
-      ],
-      "createdAt": "2026-11-17T01:00:40Z"
-    }
-  ],
+  "posts": [],
   "groups": [
     {
       "id": "grp-hiet-cse",

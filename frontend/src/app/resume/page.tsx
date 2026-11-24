@@ -756,7 +756,7 @@ export default function ResumeBuilderPage() {
               </div>
             ) : (
               /* ─── LIVE ATS RESUME PREVIEW SHEET (High-Contrast Text) ─── */
-              <div className="print-only-resume rounded-3xl border border-slate-300 bg-white text-slate-900 p-8 sm:p-12 shadow-md">
+              <div className="print-only-resume rounded-3xl border border-slate-300 bg-white text-slate-900 p-4 sm:p-12 shadow-md overflow-x-auto">
                 {/* Header Section */}
                 <div className="border-b-2 border-slate-900 pb-4">
                   <h2 className="text-3xl font-black tracking-tight text-slate-900 font-sans">

@@ -59,8 +59,8 @@ export function AuthGateModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-md">
-      <div className="relative w-full max-w-lg rounded-3xl border border-white/95 bg-white/90 p-6 sm:p-8 shadow-2xl backdrop-blur-3xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-3 sm:p-4 backdrop-blur-md">
+      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/95 bg-white/95 p-5 sm:p-8 shadow-2xl backdrop-blur-3xl">
         <button
           onClick={() => setAuthModalOpen(false)}
           aria-label="Close authentication modal"
