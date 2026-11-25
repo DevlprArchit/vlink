@@ -746,11 +746,26 @@
         "user-tarun",
         "user-deepika"
       ]
+    },
+    {
+      "id": "comp-atlassian",
+      "name": "Atlassian India",
+      "industry": "Developer Collaboration & SaaS",
+      "location": "Bengaluru / Remote",
+      "size": "10,000+ Employees",
+      "website": "https://www.atlassian.com/company/careers",
+      "description": "Creators of Jira, Confluence, and Bitbucket powering agile engineering teams worldwide.",
+      "verified": true,
+      "followerIds": [
+        "user-archit"
+      ]
     }
   ],
   "jobs": [
     {
       "id": "job-1",
+      "externalJobId": "REQ-AWS-2948172",
+      "applyUrl": "https://www.amazon.jobs/en/search?base_query=Cloud+Infrastructure+Engineer&loc_query=India",
       "companyId": "comp-aws",
       "companyName": "AWS India",
       "title": "Cloud Infrastructure & DevOps Engineer (Campus 2027)",
@@ -766,10 +781,12 @@
         "Linux"
       ],
       "description": "Join AWS India to architect high-throughput serverless applications, automate CI/CD pipelines, and optimize container clusters for enterprise scale.",
-      "postedAt": "2026-11-17T01:01:22Z"
+      "postedAt": "2026-11-22T09:00:00Z"
     },
     {
       "id": "job-2",
+      "externalJobId": "REQ-GOOG-884120",
+      "applyUrl": "https://www.google.com/about/careers/applications/jobs/results/?q=Software%20Engineer&location=India",
       "companyId": "comp-google",
       "companyName": "Google Cloud India",
       "title": "Associate AI/ML Solutions Engineer",
@@ -785,10 +802,12 @@
         "NLP"
       ],
       "description": "Build and evaluate cutting-edge NLP and semantic matching services. Partner with engineering leads to deploy scalable machine learning APIs.",
-      "postedAt": "2026-11-16T01:01:22Z"
+      "postedAt": "2026-11-21T10:30:00Z"
     },
     {
       "id": "job-3",
+      "externalJobId": "REQ-MSFT-1749203",
+      "applyUrl": "https://jobs.careers.microsoft.com/global/en/search?q=Software%20Engineer&lc=India",
       "companyId": "comp-microsoft",
       "companyName": "Microsoft India (IDC)",
       "title": "Full-Stack Software Engineer (Next.js & Cloud)",
@@ -804,10 +823,12 @@
         "System Design"
       ],
       "description": "Build consumer-facing, highly performant web products using TypeScript, modern React architectures, and distributed backend endpoints.",
-      "postedAt": "2026-11-18T01:01:22Z"
+      "postedAt": "2026-11-23T08:15:00Z"
     },
     {
       "id": "job-4",
+      "externalJobId": "REQ-MSFT-1751042",
+      "applyUrl": "https://jobs.careers.microsoft.com/global/en/search?q=Software%20Engineering%20Intern&lc=India",
       "companyId": "comp-microsoft",
       "companyName": "Microsoft India (IDC)",
       "title": "Design Systems & Frontend Engineering Intern",
@@ -823,7 +844,49 @@
         "Figma & UI/UX"
       ],
       "description": "Craft fluid, accessible design systems and component libraries with obsessive attention to micro-interactions, responsive grids, and clean design.",
-      "postedAt": "2026-11-15T01:01:22Z"
+      "postedAt": "2026-11-20T14:00:00Z"
+    },
+    {
+      "id": "job-5",
+      "externalJobId": "REQ-TCS-903412",
+      "applyUrl": "https://www.tcs.com/careers/india",
+      "companyId": "comp-tcs-labs",
+      "companyName": "TCS Research & Innovation Labs",
+      "title": "TCS Digital Systems & Cloud Developer (Fresher)",
+      "roleType": "Full-Time",
+      "location": "Delhi NCR / Pune",
+      "remote": false,
+      "stipendOrSalary": "\u20b97,50,000 - \u20b99,50,000 / year",
+      "requiredSkills": [
+        "Python",
+        "SQL",
+        "REST APIs",
+        "Java",
+        "Git"
+      ],
+      "description": "Develop enterprise microservices, relational & NoSQL pipelines, and automated API test harnesses for global digital transformation engagements.",
+      "postedAt": "2026-11-24T06:00:00Z"
+    },
+    {
+      "id": "job-6",
+      "externalJobId": "REQ-ATL-552819",
+      "applyUrl": "https://www.atlassian.com/company/careers/all-jobs?team=Engineering&location=India",
+      "companyId": "comp-atlassian",
+      "companyName": "Atlassian India",
+      "title": "Software Engineer Intern (Backend & Distributed Systems)",
+      "roleType": "Internship",
+      "location": "Bengaluru / Remote",
+      "remote": true,
+      "stipendOrSalary": "\u20b91,00,000 / month",
+      "requiredSkills": [
+        "TypeScript",
+        "Node.js",
+        "SQL",
+        "Docker",
+        "System Design"
+      ],
+      "description": "Collaborate with platform engineers to build low-latency developer tooling, high-throughput event queues, and resilient cloud APIs.",
+      "postedAt": "2026-11-24T11:30:00Z"
     }
   ],
   "applications": [

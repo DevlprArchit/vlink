@@ -141,15 +141,15 @@ export async function POST(req: NextRequest) {
       ],
       projects: [],
       interests: [targetRole, "Campus Builders", "Career Readiness"],
-      readinessScore: 42,
-      readinessTier: "Foundation Stage",
+      readinessScore: 0,
+      readinessTier: "Diagnostic Pending",
       readinessDimensions: {
-        "Core Skills": 40,
-        "Diagnostic": 35,
-        "Projects": 20,
+        "Core Skills": 0,
+        "Diagnostic": 0,
+        "Projects": 0,
         "Certifications": 0,
         "Verification": 0,
-        "Coverage": 30,
+        "Coverage": 0,
       },
       connections: ["user-archit"],
       following: ["user-archit"],
@@ -170,8 +170,8 @@ export async function POST(req: NextRequest) {
     createNotification(db, {
       userId: newUser.id,
       category: "connection",
-      title: "Welcome to V-Link!",
-      body: "Verify your campus identity, then complete the Skill Diagnostic to build your Readiness Score.",
+      title: "Welcome to V-Link! Complete Your AI DRI Test",
+      body: "Your profile starts at Diagnostic Pending. Take the AI Readiness Diagnostic to generate your verified DRI Score and Career Report.",
       link: "/readiness",
     });
 

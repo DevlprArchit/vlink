@@ -1,121 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
 import { callAiService } from "@/lib/ai-client";
+import {
+  analyzeResumeAts,
+  callCloudLLM,
+  CopilotContext,
+  CopilotTurn,
+  generateCopilotReply,
+  generateResumeContinuation,
+} from "@/lib/llm";
 import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
-
-function generateSmartCopilotAnswer(prompt: string, context?: any): string {
-  const p = prompt.toLowerCase();
-
-  if (p.includes("dri") || p.includes("readiness") || p.includes("score")) {
-    return `### ⚡ Demonstrable Readiness Index (DRI) Optimization Guide
-
-Your **Demonstrable Readiness Index (DRI)** measures industry-readiness across 6 weighted dimensions:
-
-1. **Verified Core Skills (25%)**: Validated through objective skill assessments under \`/readiness\`.
-2. **Diagnostic Accuracy (20%)**: Depth of technical problem solving and architectural questions.
-3. **GitHub & Production Projects (20%)**: Measurable project showcases with active repo URLs, live demos, and stack breadth.
-4. **Verified Credentials (15%)**: Academic domain verification (\`@hiet.co.in\`) and certified badges.
-5. **Certifications & Specializations (10%)**: Industry certifications (e.g. AWS, Meta React, Google Cloud).
-6. **Cohort Peer Coverage (10%)**: Peer endorsements and campus collaboration.
-
-**Recommended Next Actions to reach Tier-1 (90%+):**
-- Complete the 5-minute technical diagnostic under \`/readiness\`.
-- Take the skill verification quiz for your top 2 skills to earn the **Verified Campus Badge**.
-- Add a deployed project URL in your profile under \`/profile\`.`;
-  }
-
-  if (p.includes("resume") || p.includes("ats")) {
-    return `### 📄 V-Link ATS Resume Engine & Best Practices
-
-V-Link's ATS Resume Studio at \`/resume\` generates single-column, parseable resumes designed to score **90+ on corporate applicant tracking systems** (Workday, Greenhouse, Lever, Taleo):
-
-- **Zero Formatting Traps**: Standardized sans-serif fonts, no multi-column float tables, no graphics/icons that break ATS parsers.
-- **Quantified Impact Formula**: Structure every bullet point as:
-  > *Accomplished [X], as measured by [Y], by implementing [Z].*
-  > *Example: "Optimized database query latency by 42% by introducing Redis caching and compound indexing."*
-- **Role-to-JD Keyword Matcher**: Paste any target job description on \`/resume\` to calculate cosine similarity and view missing technical keywords.
-- **1-Click Export**: Download high-resolution vector PDF using the "Download ATS PDF" button.`;
-  }
-
-  if (p.includes("interview") || p.includes("mock") || p.includes("prep")) {
-    return `### 💼 Technical & Behavioral Interview Strategy
-
-To ace upcoming campus and off-campus technical interviews:
-
-1. **System Design (Frontend & Full-Stack)**:
-   - State management (local vs. server state with React Query/SWR).
-   - Latency optimization (code splitting, image optimization, edge caching).
-   - Resilience: Graceful fallback, retry backoff, circuit breaking.
-2. **Data Structures & Algorithms**:
-   - Focus on Arrays, HashMaps, Two-Pointers, BFS/DFS tree traversal, and dynamic programming fundamentals.
-3. **Behavioral (The STAR Technique)**:
-   - **Situation**: Context of the problem or project.
-   - **Task**: The specific engineering challenge.
-   - **Action**: What *you* personally designed or implemented.
-   - **Result**: Quantifiable business or technical outcome (e.g., reduced load time by 30%).
-
-💡 Try our AI Mock Interview Simulator under \`/readiness\` (Tab 3) for live feedback on role-specific questions!`;
-  }
-
-  if (p.includes("job") || p.includes("apply") || p.includes("drive") || p.includes("hire") || p.includes("placement")) {
-    return `### 🚀 Job Discovery & Campus Placement Drives
-
-V-Link connects students directly with verified opportunities at top firms:
-
-- **Active Openings on Job Radar (\`/jobs\`)**:
-  - **AWS India**: Associate Cloud Support Engineer (CTC: ₹14.5 – 18.0 LPA)
-  - **Google Cloud India**: Cloud Solutions Trainee (CTC: ₹16.0 – 22.0 LPA)
-  - **Microsoft IDC**: Software Engineering Intern / FTE (CTC: ₹15.0 – 20.0 LPA)
-- **Application Tracker**: Track applications across stages: *Applied*, *Screening*, *Technical Interview*, and *Offer*.
-- **Institutional TPO Hub (\`/tpo\`)**: Placement officers can broadcast corporate hiring drives directly to all eligible students with one click.`;
-  }
-
-  if (p.includes("code") || p.includes("python") || p.includes("react") || p.includes("next") || p.includes("typescript") || p.includes("system design") || p.includes("architecture")) {
-    return `### 💻 Engineering Architecture & Implementation Insight
-
-V-Link is built on modern, cloud-native full-stack architecture:
-
-\`\`\`typescript
-// Clean decoupled service pattern for API calls
-export async function fetchTelemetry(userId: string) {
-  const res = await fetch(\`/api/profile?id=\${userId}\`, {
-    headers: { 'Content-Type': 'application/json' },
-    next: { revalidate: 60 } // Next.js ISR caching
-  });
-  if (!res.ok) throw new Error('Telemetry retrieval failed');
-  return res.json();
-}
-\`\`\`
-
-**Key Architectural Tenets:**
-- **Zero Raw DOM Leaks**: Strict type safety with TypeScript interfaces.
-- **Glassmorphism Performance**: Hardware-accelerated CSS \`backdrop-filter: blur(28px)\` with isolated paint layers.
-- **Microservice Decoupling**: Frontend (Next.js) delegates heavy ML computations to the Python FastAPI AI service on port 8001.`;
-  }
-
-  return `### ✦ V-Link Career & Talent Intelligence
-
-I can assist you across every stage of your career and academic journey:
-
-- **⚡ Readiness & Skills**: Run diagnostics under \`/readiness\` to calculate your Demonstrable Readiness Index (DRI).
-- **📄 ATS Resume Studio**: Edit, customize, and export single-column ATS resumes on \`/resume\`.
-- **💼 Opportunities**: Filter skill-matched jobs and track applications on \`/jobs\`.
-- **🌐 Network & Peer Mentorship**: Connect with verified campus builders under \`/network\`.
-- **🏛️ Institutional TPO Hub**: Automated NAAC (Criterion 5.2) and NBA accreditation audit exports on \`/tpo\`.
-
-What specific area would you like to explore or improve right now?`;
-}
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   const db = readDb();
   const user = userId ? db.users.find((u) => u.id === userId) : undefined;
+  const geminiApiKey = req.headers.get("x-gemini-api-key") || undefined;
 
   let body: {
     task?:
       | "resume-assist"
       | "resume-compatibility"
       | "resume-polish"
+      | "resume-suggest-continuation"
+      | "resume-ats-analyze"
       | "copilot-chat"
       | "mock-interview-start"
       | "mock-interview-evaluate"
@@ -133,20 +41,68 @@ export async function POST(req: NextRequest) {
   if (body.task === "copilot-chat") {
     const p = body.payload || {};
     const message = String(p.message || "");
-    const context = p.context || {
-      userName: user?.name,
-      targetRole: user?.targetRole,
-      readinessScore: user?.readinessScore,
+    if (!message.trim()) {
+      return NextResponse.json({ error: "Message is required." }, { status: 400 });
+    }
+    const history = Array.isArray(p.history) ? (p.history as CopilotTurn[]) : [];
+    const reqContext = (p.context as CopilotContext) || {};
+    const context: CopilotContext = {
+      userName: reqContext.userName || user?.name,
+      targetRole: reqContext.targetRole || user?.targetRole,
+      readinessScore:
+        typeof reqContext.readinessScore === "number" ? reqContext.readinessScore : user?.readinessScore,
+      skills: user?.skills.map((s) => s.name) || reqContext.skills || [],
+      campus: user?.campus || reqContext.campus,
     };
 
-    const reply = generateSmartCopilotAnswer(message, context);
+    const { reply, provider } = await generateCopilotReply({
+      message,
+      history,
+      context,
+      geminiApiKey,
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         reply,
+        provider,
         timestamp: new Date().toISOString(),
       },
     });
+  }
+
+  // ── 1b. Resume Auto-Suggest Continuation ("Want to write more?") ──
+  if (body.task === "resume-suggest-continuation") {
+    const p = body.payload || {};
+    const result = await generateResumeContinuation({
+      fieldType: (p.fieldType as "summary" | "project-desc" | "bullet") || "summary",
+      currentText: String(p.currentText || ""),
+      targetRole: String(p.targetRole || user?.targetRole || "Software Engineer"),
+      skills: String(p.skills || user?.skills.map((s) => s.name).join(", ") || ""),
+      projectTitle: String(p.projectTitle || ""),
+      geminiApiKey,
+    });
+    return NextResponse.json({ success: true, data: result });
+  }
+
+  // ── 1c. Live AI ATS Resume Audit & Scorer ──
+  if (body.task === "resume-ats-analyze") {
+    const p = body.payload || {};
+    const audit = await analyzeResumeAts({
+      fullName: String(p.fullName || user?.name || ""),
+      targetRole: String(p.targetRole || user?.targetRole || "Software Engineer"),
+      summary: String(p.summary || ""),
+      skills: String(p.skills || ""),
+      projects: Array.isArray(p.projects)
+        ? (p.projects as Array<{ title: string; techStack: string; description: string; bullets: string[] }>)
+        : [],
+      education: String(p.education || ""),
+      certifications: String(p.certifications || ""),
+      jobDescription: String(p.jobDescription || ""),
+      geminiApiKey,
+    });
+    return NextResponse.json({ success: true, data: audit });
   }
 
   // ── 2. AI Resume Polish & Optimization ──
@@ -155,20 +111,50 @@ export async function POST(req: NextRequest) {
     const summary = String(p.summary || "");
     const skills = String(p.skills || "");
     const targetRole = String(p.targetRole || user?.targetRole || "Software Engineer");
+    const projects = Array.isArray(p.projects)
+      ? (p.projects as Array<{ title: string; techStack?: string; bullets?: string[] }>)
+      : [];
 
+    const cloud = await callCloudLLM({
+      geminiApiKey,
+      expectJson: true,
+      systemPrompt: `You are an expert ATS Resume Writer. Return strict JSON with keys: "polishedSummary" (string, 2-3 punchy ATS-ready sentences) and "polishedBullets" (array of 3 strong Google XYZ bullet strings tailored to their skills/projects).`,
+      userPrompt: JSON.stringify({ targetRole, summary, skills, projects }),
+    });
+
+    if (cloud) {
+      try {
+        const parsed = JSON.parse(cloud.text) as { polishedSummary?: string; polishedBullets?: string[] };
+        if (parsed.polishedSummary && Array.isArray(parsed.polishedBullets)) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              polishedSummary: parsed.polishedSummary,
+              polishedBullets: parsed.polishedBullets,
+              provider: cloud.provider,
+            },
+          });
+        }
+      } catch {
+        // fallback cleanly
+      }
+    }
+
+    const firstProj = projects[0]?.title || "full-stack campus platform";
     const polishedSummary = summary
-      ? `Results-driven ${targetRole} with proven expertise in ${skills || "modern full-stack architecture"}. Experienced in architecting resilient web applications, automating deployment pipelines, and collaborating with cross-functional engineering teams.`
-      : `High-performing ${targetRole} candidate specializing in ${skills || "distributed systems and full-stack development"}. Demonstrated track record in delivering scalable, end-to-end software solutions.`;
+      ? `Results-driven ${targetRole} with proven expertise in ${skills || "modern full-stack architecture"}. Experienced in architecting resilient web applications, automating deployment pipelines, and delivering measurable engineering outcomes.`
+      : `High-performing ${targetRole} candidate specializing in ${skills || "distributed systems and full-stack development"}. Demonstrated track record building scalable, end-to-end software solutions.`;
 
     return NextResponse.json({
       success: true,
       data: {
         polishedSummary,
         polishedBullets: [
-          "Architected high-throughput microservices reducing API latency by 35% through Redis caching.",
-          "Implemented comprehensive automated testing suites and CI/CD pipelines with GitHub Actions.",
-          "Collaborated in an agile scrum environment to deliver core business features ahead of schedule.",
+          `Architected ${firstProj} using ${skills ? skills.split(",").slice(0, 3).join(", ") : "TypeScript & Cloud APIs"}, reducing API latency by 35% via query optimization.`,
+          "Implemented automated unit/integration test suites and CI/CD pipelines ensuring zero-regression production deployments.",
+          "Collaborated across cross-functional engineering workflows to ship responsive, accessible interfaces ahead of sprint milestones.",
         ],
+        provider: "vlink-writing-ai",
       },
     });
   }
@@ -192,7 +178,7 @@ export async function POST(req: NextRequest) {
         education: targetUser.education,
       },
       () => ({
-        ats_score: 91,
+        ats_score: Math.min(94, 52 + targetUser.skills.length * 4 + targetUser.projects.length * 8),
         professional_summary: `Computer Science student targeting ${targetUser.targetRole} roles with verified proficiency in ${targetUser.skills
           .slice(0, 5)
           .map((s) => s.name)
@@ -206,8 +192,8 @@ export async function POST(req: NextRequest) {
         })),
         ats_checklist: [
           { label: "Single-column ATS-safe layout", passed: true },
-          { label: "Skills & projects synced from profile", passed: true },
-          { label: "Action-verb bullet phrasing verified", passed: true },
+          { label: "Skills & projects synced from profile", passed: targetUser.skills.length >= 2 },
+          { label: "Action-verb bullet phrasing verified", passed: targetUser.projects.length >= 1 },
         ],
       })
     );
@@ -238,21 +224,37 @@ export async function POST(req: NextRequest) {
       },
       () => {
         const lower = resumeText.toLowerCase();
-        const matched = reqSkills.filter((s) => lower.includes(s.toLowerCase()));
-        const missing = reqSkills.filter((s) => !lower.includes(s.toLowerCase()));
+        const jdLower = jobDesc.toLowerCase();
+        const extractedFromJd = Array.from(
+          new Set(
+            [
+              ...reqSkills,
+              ...["typescript", "react", "next.js", "python", "aws", "docker", "sql", "node.js", "fastapi", "git", "linux", "ci/cd", "kubernetes", "java"].filter(
+                (kw) => jdLower.includes(kw)
+              ),
+            ]
+          )
+        );
+        const targetKeywords = extractedFromJd.length > 0 ? extractedFromJd : reqSkills;
+        const matched = targetKeywords.filter((s) => lower.includes(s.toLowerCase()));
+        const missing = targetKeywords.filter((s) => !lower.includes(s.toLowerCase()));
         const score = Math.min(
-          96,
-          Math.max(45, Math.round((matched.length / Math.max(1, reqSkills.length)) * 80 + 18))
+          97,
+          Math.max(32, Math.round((matched.length / Math.max(1, targetKeywords.length)) * 82 + 16))
         );
         return {
           compatibility_score: score,
           ats_keyword_coverage: score,
           matched_keywords: matched,
           missing_keywords: missing,
-          strengths: ["Profile projects and skills included without manual re-entry.", "Clean single-column parsing alignment."],
+          strengths: [
+            matched.length > 0
+              ? `Direct resume alignment on ${matched.join(", ")}.`
+              : "Clean single-column ATS parsing structure.",
+          ],
           improvement_suggestions: missing.length
-            ? [`Add measurable experience with ${missing.join(", ")}.`]
-            : ["Strong keyword alignment with this job description."],
+            ? [`Add measurable experience highlighting ${missing.slice(0, 4).join(", ")}.`]
+            : ["Excellent keyword coverage against this target role description."],
         };
       }
     );
@@ -264,6 +266,25 @@ export async function POST(req: NextRequest) {
     const p = body.payload || {};
     const targetRole = String(p.targetRole || user?.targetRole || "Full-Stack Software Engineer");
     const focusSkills = (p.focusSkills as string[]) || user?.skills.slice(0, 4).map((s) => s.name) || [];
+
+    const cloud = await callCloudLLM({
+      geminiApiKey,
+      expectJson: true,
+      systemPrompt: `You are a Senior Technical Interviewer. Return strict JSON with keys: "session_id" (string), "target_role" (string), and "questions" (array of 3 objects with "id", "category", "question", "expected_concepts" (array of 4 short keywords)).`,
+      userPrompt: `Generate 3 tailored interview questions for role "${targetRole}" focusing on skills: ${focusSkills.join(", ") || "software architecture, data structures, testing"}.`,
+    });
+
+    if (cloud) {
+      try {
+        const parsed = JSON.parse(cloud.text) as { questions?: unknown[] };
+        if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+          return NextResponse.json({ data: parsed, source: cloud.provider });
+        }
+      } catch {
+        // fallback cleanly
+      }
+    }
+
     const res = await callAiService(
       "/api/ai/mock-interview/start",
       { target_role: targetRole, difficulty: "Intermediate", focus_skills: focusSkills },
@@ -280,8 +301,14 @@ export async function POST(req: NextRequest) {
           {
             id: "iq-2",
             category: "Project Deep-Dive",
-            question: `Walk through a challenging bug or performance bottleneck you solved using ${focusSkills.slice(0, 2).join(" and ") || "your stack"}.`,
+            question: `Walk through a challenging bug or performance bottleneck you solved using ${focusSkills.slice(0, 2).join(" and ") || "your primary stack"}.`,
             expected_concepts: ["profiling", "trade-offs", "testing", "latency"],
+          },
+          {
+            id: "iq-3",
+            category: "Production Reliability",
+            question: `How do you validate external inputs, handle API failures gracefully, and monitor service health for ${targetRole} systems?`,
+            expected_concepts: ["validation", "error handling", "timeouts", "logging"],
           },
         ],
       })
@@ -294,27 +321,52 @@ export async function POST(req: NextRequest) {
     const p = body.payload || {};
     const answer = String(p.answer || "");
     const expected = (p.expectedConcepts as string[]) || [];
+    const targetRole = String(p.targetRole || "Software Engineer");
+    const question = String(p.question || "");
+
+    const cloud = await callCloudLLM({
+      geminiApiKey,
+      expectJson: true,
+      systemPrompt: `You are a Senior Technical Interviewer. Evaluate the candidate's answer strictly and constructively. Return JSON ONLY with keys: "score" (0-100), "clarity_score" (0-100), "technical_accuracy" (0-100), "concepts_covered" (string[]), "concepts_missed" (string[]), "feedback" (2 crisp sentences), "sample_strong_answer" (2-3 crisp sentences).`,
+      userPrompt: `Role: ${targetRole}\nQuestion: ${question}\nExpected Concepts: ${expected.join(", ")}\nCandidate Answer: ${answer}`,
+    });
+
+    if (cloud) {
+      try {
+        const parsed = JSON.parse(cloud.text) as { score?: number };
+        if (typeof parsed.score === "number") {
+          return NextResponse.json({ data: parsed, source: cloud.provider });
+        }
+      } catch {
+        // fallback cleanly
+      }
+    }
+
     const res = await callAiService(
       "/api/ai/mock-interview/evaluate",
       {
-        target_role: String(p.targetRole || "Software Engineer"),
-        question: String(p.question || ""),
+        target_role: targetRole,
+        question,
         expected_concepts: expected,
         answer,
       },
       () => {
         const covered = expected.filter((c) => answer.toLowerCase().includes(c.toLowerCase()));
         const missed = expected.filter((c) => !covered.includes(c));
-        const score = Math.min(94, Math.max(40, Math.round((covered.length / Math.max(1, expected.length)) * 60 + 35)));
+        const wordBoost = Math.min(25, Math.floor(answer.trim().split(/\s+/).length / 2));
+        const score = Math.min(95, Math.max(30, Math.round((covered.length / Math.max(1, expected.length)) * 55 + 20 + wordBoost)));
         return {
           score,
-          clarity_score: score,
+          clarity_score: Math.min(95, score + 3),
           technical_accuracy: score,
           concepts_covered: covered,
           concepts_missed: missed,
-          feedback: "Good structured response; highlight explicit architectural trade-offs and validation checks.",
+          feedback:
+            covered.length > 0
+              ? `Strong coverage of ${covered.join(", ")}. Deepen your answer by discussing trade-offs around ${missed.join(", ") || "observability and edge cases"}.`
+              : `Expand with concrete mechanisms such as ${expected.slice(0, 3).join(", ")} and real latency/scale trade-offs.`,
           sample_strong_answer:
-            "Route requests through an authenticated API layer, validate payloads, cache hot reads, and isolate AI calls behind timeouts.",
+            "Route requests through an authenticated API layer, validate payloads, cache hot reads, apply timeouts with graceful fallback, and capture structured telemetry.",
         };
       }
     );

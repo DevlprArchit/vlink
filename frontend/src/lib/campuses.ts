@@ -51,7 +51,7 @@ export const CAMPUS_NODES: CampusNode[] = [
     location: "Shahpur, Kangra (HP)",
     accreditation: "NAAC Grade A Accredited",
     nbaStatus: "NBA Tier-2 Compliant (CSE)",
-    tpoOfficerName: "Dr. Rajesh K. Sharma",
+    tpoOfficerName: "Ms. Ruchi",
     tpoOfficerTitle: "Head of Training & Placement",
     tpoEmail: "tpo@hiet.co.in",
     tpoPhone: "+91 98160 55432",

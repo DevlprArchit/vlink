@@ -119,13 +119,42 @@ export async function PATCH(req: NextRequest) {
 
   const body = (await req.json()) as {
     postId: string;
-    action: "like" | "repost" | "comment";
+    action: "like" | "repost" | "comment" | "edit";
     commentText?: string;
+    title?: string;
+    content?: string;
+    tags?: string[];
   };
 
   const post = db.posts.find((p) => p.id === body.postId);
   if (!post) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  if (body.action === "edit") {
+    if (post.authorId !== user.id) {
+      return NextResponse.json({ error: "Forbidden: You can only edit your own posts." }, { status: 403 });
+    }
+    if (!body.content || !body.content.trim()) {
+      return NextResponse.json({ error: "Post content cannot be empty." }, { status: 400 });
+    }
+    post.content = body.content.trim();
+    if (body.title !== undefined) {
+      post.title = body.title.trim() || undefined;
+    }
+    if (Array.isArray(body.tags)) {
+      post.tags = body.tags.map((t) => t.trim().replace(/^#/, "")).filter(Boolean);
+    }
+    post.updatedAt = new Date().toISOString();
+    writeDb(db);
+    const group = post.groupId ? db.groups.find((g) => g.id === post.groupId) : undefined;
+    return NextResponse.json({
+      post: {
+        ...post,
+        author: toPublicProfile(user),
+        groupName: group?.name || null,
+      },
+    });
   }
 
   if (body.action === "like") {
@@ -153,4 +182,39 @@ export async function PATCH(req: NextRequest) {
 
   writeDb(db);
   return NextResponse.json({ post });
+}
+
+export async function DELETE(req: NextRequest) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let postId = req.nextUrl.searchParams.get("postId") || "";
+  if (!postId) {
+    try {
+      const body = (await req.json()) as { postId?: string };
+      postId = body.postId || "";
+    } catch {
+      // ignore empty body
+    }
+  }
+
+  if (!postId) {
+    return NextResponse.json({ error: "postId is required." }, { status: 400 });
+  }
+
+  const db = readDb();
+  const idx = db.posts.findIndex((p) => p.id === postId);
+  if (idx === -1) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  if (db.posts[idx].authorId !== userId) {
+    return NextResponse.json({ error: "Forbidden: You can only delete your own posts." }, { status: 403 });
+  }
+
+  db.posts.splice(idx, 1);
+  writeDb(db);
+  return NextResponse.json({ deleted: true, postId });
 }

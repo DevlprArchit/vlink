@@ -1,13 +1,16 @@
 "use client";
 
 import React, { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Bookmark,
+  Bot,
   Briefcase,
   Building2,
   CheckCircle2,
   ExternalLink,
+  FileText,
   Globe,
   MapPin,
   Monitor,
@@ -16,6 +19,7 @@ import {
   Sparkles,
   Users,
   Wifi,
+  X,
   Zap,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -206,6 +210,12 @@ Required Qualifications:
   const [applying, setApplying] = useState<string | null>(null);
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
 
+  // LinkedIn-style Application Form Modal State
+  const [applyModalJob, setApplyModalJob] = useState<HydratedJob | null>(null);
+  const [appPhone, setAppPhone] = useState("+91 98160 00000");
+  const [appPortfolio, setAppPortfolio] = useState("https://github.com/DevlprArchit");
+  const [appCoverNote, setAppCoverNote] = useState("");
+
   const loadJobs = useCallback(async () => {
     setLoading(true);
     try {
@@ -234,17 +244,33 @@ Required Qualifications:
     void loadJobs();
   }, [loadJobs]);
 
-  async function handleApply(job: HydratedJob) {
+  function openApplyModal(job: HydratedJob) {
+    if (!user) { setAuthModalOpen(true); return; }
+    setApplyModalJob(job);
+    setAppCoverNote(
+      `Excited to apply for ${job.title} (${job.externalJobId || job.id}) at ${job.companyName}. My verified skills in ${job.requiredSkills.slice(0, 3).join(", ")} and V-Link project portfolio align strongly with this team's mission.`
+    );
+  }
+
+  async function handleApply(job: HydratedJob, appliedVia: "vlink-form" | "external-portal" = "vlink-form") {
     if (!user) { setAuthModalOpen(true); return; }
     setApplying(job.id);
     try {
       const res = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: job.id, matchScore: job.match?.match_score }),
+        body: JSON.stringify({
+          jobId: job.id,
+          matchScore: job.match?.match_score,
+          coverNote: appCoverNote,
+          phone: appPhone,
+          portfolioUrl: appPortfolio,
+          appliedVia,
+        }),
       });
       if (res.ok) {
-        setFeedback(`Application recorded for "${job.title}" with status 'applied'.`);
+        setFeedback(`Application submitted for "${job.title}" (${job.externalJobId || job.id})! Track status in Tracker.`);
+        setApplyModalJob(null);
         await loadJobs();
       }
     } finally {
@@ -311,7 +337,7 @@ Required Qualifications:
             Skill-aware job matching powered by your verified V-Link readiness score, plus stage-by-stage application tracking.
           </p>
         </div>
-        <div className="flex rounded-full bg-slate-100 border border-slate-200/80 p-1 text-xs font-semibold">
+        <div className="flex flex-wrap rounded-2xl sm:rounded-full bg-slate-100 border border-slate-200/80 p-1 text-xs font-semibold gap-1">
           {(["jobs", "tracker", "companies", "post-job"] as const).map((t) => (
             <button
               key={t}
@@ -483,7 +509,10 @@ Required Qualifications:
 
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-base font-bold text-slate-900 font-bold">{job.title}</h2>
+                            <h2 className="text-base font-bold text-slate-900">{job.title}</h2>
+                            <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-mono font-bold text-white">
+                              {job.externalJobId || job.id.toUpperCase()}
+                            </span>
                             <span className="rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
                               {job.roleType}
                             </span>
@@ -524,8 +553,8 @@ Required Qualifications:
                         </div>
                       </div>
 
-                      {/* Right: actions */}
-                      <div className="flex shrink-0 items-center gap-2">
+                      {/* Right: LinkedIn-style Actions (Application Form, Official Site Redirect, AI Interview) */}
+                      <div className="flex flex-wrap shrink-0 items-center gap-2">
                         {/* Bookmark */}
                         <button
                           type="button"
@@ -540,25 +569,41 @@ Required Qualifications:
                           <Bookmark className={`h-4 w-4 ${isSaved ? "fill-amber-500" : ""}`} />
                         </button>
 
-                        {/* Quick Apply button */}
+                        {/* Official Careers Portal Redirect */}
+                        <a
+                          href={job.applyUrl || `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.title + " " + job.companyName)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 hover:border-[#4F46E5] hover:text-[#4F46E5] transition shadow-2xs"
+                        >
+                          <span>Official Site</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+
+                        {/* Direct AI Interview Simulator Link */}
+                        <Link
+                          href={`/readiness?tab=ai-studio&role=${encodeURIComponent(job.title)}&skills=${encodeURIComponent(job.requiredSkills.join(","))}`}
+                          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition shadow-2xs"
+                        >
+                          <Bot className="h-3.5 w-3.5" />
+                          <span>Give Interview</span>
+                        </Link>
+
+                        {/* LinkedIn-Style Application Form Button */}
                         <button
                           type="button"
                           disabled={isApplied || isApplying}
-                          onClick={() => void handleApply(job)}
-                          className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-semibold shadow-sm transition ${
+                          onClick={() => openApplyModal(job)}
+                          className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold shadow-sm transition ${
                             isApplied
                               ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : isApplying
-                              ? "bg-brand-400 text-slate-900 cursor-wait"
-                              : "btn-1of1-primary text-white hover:bg-brand-700 active:scale-95"
+                              : "btn-dibs-primary text-white active:scale-95"
                           }`}
                         >
                           {isApplied ? (
                             <><CheckCircle2 className="h-4 w-4" /> Applied</>
-                          ) : isApplying ? (
-                            <><Zap className="h-4 w-4 animate-pulse" /> Applying…</>
                           ) : (
-                            <><Zap className="h-4 w-4" /> Quick Apply</>
+                            <><FileText className="h-3.5 w-3.5" /> Apply Form</>
                           )}
                         </button>
                       </div>
@@ -894,6 +939,142 @@ Required Qualifications:
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ── LINKEDIN-STYLE APPLICATION FORM MODAL ── */}
+      {applyModalJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 sm:p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/95 bg-white p-5 sm:p-7 shadow-2xl space-y-4">
+            <button
+              type="button"
+              onClick={() => setApplyModalJob(null)}
+              aria-label="Close application modal"
+              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="space-y-1 pr-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-mono font-bold text-white">
+                  Job ID: {applyModalJob.externalJobId || applyModalJob.id.toUpperCase()}
+                </span>
+                <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                  {applyModalJob.roleType}
+                </span>
+              </div>
+              <h2 className="text-lg font-extrabold text-slate-900">{applyModalJob.title}</h2>
+              <p className="text-xs text-slate-600 font-medium">
+                {applyModalJob.companyName} · {applyModalJob.location} ·{" "}
+                <strong className="text-emerald-700">{applyModalJob.stipendOrSalary}</strong>
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5 text-xs text-slate-700 space-y-2">
+              <p className="leading-relaxed">{applyModalJob.description}</p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {applyModalJob.requiredSkills.map((sk) => (
+                  <span key={sk} className="rounded-md bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-800">
+                    {sk}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleApply(applyModalJob, "vlink-form");
+              }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Applicant Name</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={user?.name || ""}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Verified Email</label>
+                  <input
+                    type="email"
+                    readOnly
+                    value={user?.email || ""}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={appPhone}
+                    onChange={(e) => setAppPhone(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#4F46E5]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">GitHub / Resume URL</label>
+                  <input
+                    type="url"
+                    required
+                    value={appPortfolio}
+                    onChange={(e) => setAppPortfolio(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-[#4F46E5]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Application Cover Note (Attached with V-Link ATS Resume)
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={appCoverNote}
+                  onChange={(e) => setAppCoverNote(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-[#4F46E5]"
+                />
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <button
+                  type="submit"
+                  disabled={applying === applyModalJob.id}
+                  className="flex-1 btn-dibs-primary text-xs py-2.5 justify-center"
+                >
+                  <FileText className="h-4 w-4" />
+                  {applying === applyModalJob.id ? "Submitting Form..." : "Submit Application Form"}
+                </button>
+                <a
+                  href={applyModalJob.applyUrl || `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(applyModalJob.title)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => void handleApply(applyModalJob, "external-portal")}
+                  className="btn-dibs-secondary text-xs py-2.5 px-4 justify-center inline-flex items-center gap-1.5"
+                >
+                  <span>Apply on Official Website</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+
+              <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Want to prepare before submitting?</span>
+                <Link
+                  href={`/readiness?tab=ai-studio&role=${encodeURIComponent(applyModalJob.title)}&skills=${encodeURIComponent(applyModalJob.requiredSkills.join(","))}`}
+                  className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:underline"
+                >
+                  <Bot className="h-3.5 w-3.5" /> Practice AI Interview for this Role →
+                </Link>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

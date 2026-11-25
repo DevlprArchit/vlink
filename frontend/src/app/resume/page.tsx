@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
 import {
   CheckCircle2,
@@ -14,9 +14,42 @@ import {
   Sparkles,
   Trash2,
   Wand2,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { JobPosting } from "@/lib/types";
+
+function getAiHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const key = localStorage.getItem("vlink_gemini_api_key");
+    if (key?.trim()) headers["x-gemini-api-key"] = key.trim();
+  } catch {
+    // ignore storage errors
+  }
+  return headers;
+}
+
+interface AtsAuditResult {
+  ats_score: number;
+  grade: string;
+  summary_verdict: string;
+  ats_checklist: Array<{ label: string; passed: boolean }>;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  ai_recommendations: string[];
+  provider: string;
+}
+
+interface WritingSuggestionPopup {
+  fieldKey: string;
+  fieldType: "summary" | "project-desc" | "bullet";
+  projectId?: string;
+  bulletIdx?: number;
+  headlinePrompt: string;
+  suggestions: string[];
+  provider: string;
+}
 
 interface AssistResult {
   ats_score: number;
@@ -64,8 +97,13 @@ export default function ResumeBuilderPage() {
   const [customJd, setCustomJd] = useState("");
   const [compat, setCompat] = useState<CompatibilityResult | null>(null);
   const [pdfMessage, setPdfMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"preview" | "editor">("preview");
+  const [activeTab, setActiveTab] = useState<"preview" | "editor">("editor");
   const [polishing, setPolishing] = useState(false);
+  const [atsAudit, setAtsAudit] = useState<AtsAuditResult | null>(null);
+  const [auditingAts, setAuditingAts] = useState(false);
+  const [writingPopup, setWritingPopup] = useState<WritingSuggestionPopup | null>(null);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [resumeForm, setResumeForm] = useState<ResumeFormState>({
     fullName: "",
@@ -184,13 +222,14 @@ export default function ResumeBuilderPage() {
     try {
       const res = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAiHeaders(),
         body: JSON.stringify({
           task: "resume-polish",
           payload: {
             summary: resumeForm.summary,
             skills: resumeForm.skills,
             targetRole: resumeForm.targetRole,
+            projects: resumeForm.projects,
           },
         }),
       });
@@ -213,6 +252,140 @@ export default function ResumeBuilderPage() {
     } finally {
       setPolishing(false);
     }
+  }
+
+  const runAiAtsAudit = useCallback(async () => {
+    if (!resumeForm.fullName && !resumeForm.summary && !resumeForm.skills) return;
+    setAuditingAts(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: getAiHeaders(),
+        body: JSON.stringify({
+          task: "resume-ats-analyze",
+          payload: {
+            fullName: resumeForm.fullName,
+            targetRole: resumeForm.targetRole,
+            summary: resumeForm.summary,
+            skills: resumeForm.skills,
+            projects: resumeForm.projects,
+            education: resumeForm.education,
+            certifications: resumeForm.certifications,
+            jobDescription: customJd,
+          },
+        }),
+      });
+      if (res.ok) {
+        const d = (await res.json()) as { data?: AtsAuditResult };
+        if (d.data) setAtsAudit(d.data);
+      }
+    } finally {
+      setAuditingAts(false);
+    }
+  }, [resumeForm, customJd]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void runAiAtsAudit();
+    }, 900);
+    return () => clearTimeout(t);
+  }, [runAiAtsAudit]);
+
+  const requestWritingSuggestions = useCallback(
+    async (params: {
+      fieldKey: string;
+      fieldType: "summary" | "project-desc" | "bullet";
+      currentText: string;
+      projectId?: string;
+      projectTitle?: string;
+      bulletIdx?: number;
+    }) => {
+      setLoadingSuggest(true);
+      try {
+        const res = await fetch("/api/ai", {
+          method: "POST",
+          headers: getAiHeaders(),
+          body: JSON.stringify({
+            task: "resume-suggest-continuation",
+            payload: {
+              fieldType: params.fieldType,
+              currentText: params.currentText,
+              targetRole: resumeForm.targetRole,
+              skills: resumeForm.skills,
+              projectTitle: params.projectTitle,
+            },
+          }),
+        });
+        if (res.ok) {
+          const d = (await res.json()) as {
+            data?: { headlinePrompt: string; suggestions: string[]; provider: string };
+          };
+          if (d.data?.suggestions?.length) {
+            setWritingPopup({
+              fieldKey: params.fieldKey,
+              fieldType: params.fieldType,
+              projectId: params.projectId,
+              bulletIdx: params.bulletIdx,
+              headlinePrompt: d.data.headlinePrompt,
+              suggestions: d.data.suggestions,
+              provider: d.data.provider,
+            });
+          }
+        }
+      } finally {
+        setLoadingSuggest(false);
+      }
+    },
+    [resumeForm.targetRole, resumeForm.skills]
+  );
+
+  function scheduleWritingSuggest(params: {
+    fieldKey: string;
+    fieldType: "summary" | "project-desc" | "bullet";
+    currentText: string;
+    projectId?: string;
+    projectTitle?: string;
+    bulletIdx?: number;
+  }) {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (params.currentText.trim().length < 10) return;
+    typingTimerRef.current = setTimeout(() => {
+      void requestWritingSuggestions(params);
+    }, 1000);
+  }
+
+  function applyWritingSuggestion(text: string) {
+    if (!writingPopup) return;
+    if (writingPopup.fieldType === "summary") {
+      setResumeForm((prev) => ({ ...prev, summary: text }));
+    } else if (writingPopup.fieldType === "project-desc" && writingPopup.projectId) {
+      setResumeForm((prev) => ({
+        ...prev,
+        projects: prev.projects.map((p) =>
+          p.id === writingPopup.projectId ? { ...p, description: text } : p
+        ),
+      }));
+    } else if (
+      writingPopup.fieldType === "bullet" &&
+      writingPopup.projectId &&
+      typeof writingPopup.bulletIdx === "number"
+    ) {
+      setResumeForm((prev) => ({
+        ...prev,
+        projects: prev.projects.map((p) =>
+          p.id === writingPopup.projectId
+            ? {
+                ...p,
+                bullets: p.bullets.map((b, idx) =>
+                  idx === writingPopup.bulletIdx ? text : b
+                ),
+              }
+            : p
+        ),
+      }));
+    }
+    setWritingPopup(null);
+    setPdfMessage("✦ AI suggestion inserted cleanly into your resume!");
   }
 
   function handleAddProject() {
@@ -597,18 +770,73 @@ export default function ResumeBuilderPage() {
 
                 {/* Professional Summary */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
                       2. Professional Summary
                     </h4>
-                    <span className="text-[10px] text-slate-400 font-mono">{resumeForm.summary.length} chars</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void requestWritingSuggestions({
+                            fieldKey: "summary",
+                            fieldType: "summary",
+                            currentText: resumeForm.summary,
+                          })
+                        }
+                        className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 transition"
+                      >
+                        <Sparkles className="h-3 w-3" /> Want to write more? (AI)
+                      </button>
+                      <span className="text-[10px] text-slate-400 font-mono">{resumeForm.summary.length} chars</span>
+                    </div>
                   </div>
                   <textarea
                     rows={3}
                     value={resumeForm.summary}
-                    onChange={(e) => setResumeForm({ ...resumeForm, summary: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setResumeForm({ ...resumeForm, summary: val });
+                      scheduleWritingSuggest({
+                        fieldKey: "summary",
+                        fieldType: "summary",
+                        currentText: val,
+                      });
+                    }}
+                    placeholder="Start writing a sentence about your skills or focus — AI will automatically offer ideas to write more..."
                     className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-[#4F46E5]"
                   />
+
+                  {writingPopup?.fieldKey === "summary" && (
+                    <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/90 to-white p-3.5 shadow-md space-y-2 animate-in fade-in">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
+                          <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                          {writingPopup.headlinePrompt}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setWritingPopup(null)}
+                          className="text-slate-400 hover:text-slate-700 p-0.5"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {writingPopup.suggestions.map((sug, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => applyWritingSuggestion(sug)}
+                            className="w-full text-left rounded-xl border border-indigo-100 bg-white p-2.5 text-[11px] text-slate-700 hover:border-indigo-400 hover:bg-indigo-50/40 transition shadow-2xs"
+                          >
+                            <span className="font-bold text-indigo-700">Option {idx + 1}: </span>
+                            {sug}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Technical Skills */}
@@ -673,13 +901,68 @@ export default function ResumeBuilderPage() {
                           />
                         </div>
 
-                        <textarea
-                          rows={2}
-                          value={proj.description}
-                          placeholder="High-level project summary..."
-                          onChange={(e) => handleUpdateProject(proj.id, "description", e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-[#4F46E5]"
-                        />
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              Project Description
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void requestWritingSuggestions({
+                                  fieldKey: `desc-${proj.id}`,
+                                  fieldType: "project-desc",
+                                  currentText: proj.description,
+                                  projectId: proj.id,
+                                  projectTitle: proj.title,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"
+                            >
+                              <Sparkles className="h-3 w-3" /> Want to write more? (AI)
+                            </button>
+                          </div>
+                          <textarea
+                            rows={2}
+                            value={proj.description}
+                            placeholder="Write a brief line about what you built — AI will offer technical expansions..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleUpdateProject(proj.id, "description", val);
+                              scheduleWritingSuggest({
+                                fieldKey: `desc-${proj.id}`,
+                                fieldType: "project-desc",
+                                currentText: val,
+                                projectId: proj.id,
+                                projectTitle: proj.title,
+                              });
+                            }}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-[#4F46E5]"
+                          />
+                          {writingPopup?.fieldKey === `desc-${proj.id}` && (
+                            <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 p-3 space-y-1.5 shadow-sm">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-indigo-900">
+                                <span className="flex items-center gap-1">
+                                  <Sparkles className="h-3 w-3 text-indigo-600" />
+                                  {writingPopup.headlinePrompt}
+                                </span>
+                                <button type="button" onClick={() => setWritingPopup(null)}>
+                                  <X className="h-3.5 w-3.5 text-slate-500" />
+                                </button>
+                              </div>
+                              {writingPopup.suggestions.map((sug, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => applyWritingSuggestion(sug)}
+                                  className="w-full text-left rounded-lg border border-indigo-100 bg-white p-2 text-[11px] text-slate-700 hover:border-indigo-400"
+                                >
+                                  {sug}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
                         {/* Bullets */}
                         <div className="space-y-1.5 pl-2 border-l-2 border-slate-200">
@@ -696,20 +979,70 @@ export default function ResumeBuilderPage() {
                             </button>
                           </div>
                           {proj.bullets.map((b, bIdx) => (
-                            <div key={bIdx} className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={b}
-                                onChange={(e) => handleUpdateBullet(proj.id, bIdx, e.target.value)}
-                                className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-[#4F46E5]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveBullet(proj.id, bIdx)}
-                                className="text-slate-400 hover:text-rose-600 text-xs px-1.5"
-                              >
-                                ✕
-                              </button>
+                            <div key={bIdx} className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={b}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    handleUpdateBullet(proj.id, bIdx, val);
+                                    scheduleWritingSuggest({
+                                      fieldKey: `bullet-${proj.id}-${bIdx}`,
+                                      fieldType: "bullet",
+                                      currentText: val,
+                                      projectId: proj.id,
+                                      projectTitle: proj.title,
+                                      bulletIdx: bIdx,
+                                    });
+                                  }}
+                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-[#4F46E5]"
+                                />
+                                <button
+                                  type="button"
+                                  title="Ask AI to write/expand this bullet"
+                                  onClick={() =>
+                                    void requestWritingSuggestions({
+                                      fieldKey: `bullet-${proj.id}-${bIdx}`,
+                                      fieldType: "bullet",
+                                      currentText: b,
+                                      projectId: proj.id,
+                                      projectTitle: proj.title,
+                                      bulletIdx: bIdx,
+                                    })
+                                  }
+                                  className="inline-flex items-center gap-0.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 shrink-0"
+                                >
+                                  <Sparkles className="h-3 w-3" /> AI
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveBullet(proj.id, bIdx)}
+                                  className="text-slate-400 hover:text-rose-600 text-xs px-1.5"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              {writingPopup?.fieldKey === `bullet-${proj.id}-${bIdx}` && (
+                                <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 p-2.5 space-y-1.5 shadow-sm">
+                                  <div className="flex items-center justify-between text-[10px] font-bold text-indigo-900">
+                                    <span>✦ {writingPopup.headlinePrompt}</span>
+                                    <button type="button" onClick={() => setWritingPopup(null)}>
+                                      <X className="h-3 w-3 text-slate-500" />
+                                    </button>
+                                  </div>
+                                  {writingPopup.suggestions.map((sug, sIdx) => (
+                                    <button
+                                      key={sIdx}
+                                      type="button"
+                                      onClick={() => applyWritingSuggestion(sug)}
+                                      className="w-full text-left rounded-lg border border-indigo-100 bg-white p-2 text-[11px] text-slate-700 hover:border-indigo-400"
+                                    >
+                                      {sug}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -852,32 +1185,79 @@ export default function ResumeBuilderPage() {
             )}
           </div>
 
-          {/* Right Rail: ATS Scoring & JD Compatibility */}
+          {/* Right Rail: AI ATS Scoring & JD Compatibility */}
           <aside className="no-print space-y-4 lg:col-span-4">
-            {assist && (
-              <div className="card-dibs p-5 bg-white/90 border border-white/90 rounded-3xl shadow-sm backdrop-blur-2xl space-y-3">
-                <div className="flex items-center justify-between">
+            <div className="card-dibs p-5 bg-white/90 border border-white/90 rounded-3xl shadow-sm backdrop-blur-2xl space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
-                    ATS Readiness Score
+                    AI ATS Readiness Score
                   </span>
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-extrabold text-emerald-700 border border-emerald-200">
-                    {assist.ats_score}/100
-                  </span>
+                  <div className="text-[10px] text-slate-400 font-medium">
+                    {atsAudit ? `${atsAudit.grade} · Live Audit (${atsAudit.provider})` : "Analyzing live resume..."}
+                  </div>
                 </div>
-                <div className="space-y-2 pt-1">
-                  {assist.ats_checklist.map((item) => (
-                    <div key={item.label} className="flex items-center gap-2 text-xs text-slate-800">
-                      <CheckCircle2
-                        className={`h-4 w-4 shrink-0 ${
-                          item.passed ? "text-emerald-600" : "text-slate-400"
-                        }`}
-                      />
-                      <span className="font-medium">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-extrabold border ${
+                    (atsAudit?.ats_score ?? 0) >= 80
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-800 border-amber-200"
+                  }`}
+                >
+                  {atsAudit?.ats_score ?? assist?.ats_score ?? "—"} / 100
+                </span>
               </div>
-            )}
+
+              {loadingSuggest && (
+                <div className="rounded-xl bg-indigo-50 px-3 py-1.5 text-[11px] font-semibold text-indigo-700 animate-pulse">
+                  ✦ AI is generating writing ideas...
+                </div>
+              )}
+
+              {atsAudit?.summary_verdict && (
+                <p className="text-[11px] text-slate-700 leading-relaxed bg-slate-50 border border-slate-200/70 rounded-xl p-2.5">
+                  {atsAudit.summary_verdict}
+                </p>
+              )}
+
+              <div className="space-y-2 pt-1">
+                {(atsAudit?.ats_checklist || assist?.ats_checklist || []).map((item) => (
+                  <div key={item.label} className="flex items-center gap-2 text-xs text-slate-800">
+                    <CheckCircle2
+                      className={`h-4 w-4 shrink-0 ${
+                        item.passed ? "text-emerald-600" : "text-slate-300"
+                      }`}
+                    />
+                    <span className={`font-medium ${item.passed ? "text-slate-800" : "text-slate-400"}`}>
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {atsAudit && atsAudit.ai_recommendations.length > 0 && (
+                <div className="rounded-xl bg-indigo-50/50 border border-indigo-100 p-3 space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-900">
+                    ✦ AI ATS Suggestions
+                  </div>
+                  <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-700">
+                    {atsAudit.ai_recommendations.map((rec, i) => (
+                      <li key={i}>{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={auditingAts}
+                onClick={() => void runAiAtsAudit()}
+                className="w-full btn-dibs-primary text-xs py-2 justify-center disabled:opacity-60"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {auditingAts ? "Auditing with AI..." : "Re-Run Live AI ATS Audit"}
+              </button>
+            </div>
 
             <div className="card-dibs p-5 bg-white/90 border border-white/90 rounded-3xl shadow-sm backdrop-blur-2xl space-y-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-900">

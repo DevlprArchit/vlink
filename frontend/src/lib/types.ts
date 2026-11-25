@@ -71,6 +71,7 @@ export interface Post {
   reposts: string[];
   comments: PostComment[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CommunityGroup {
@@ -113,6 +114,8 @@ export interface Company {
 
 export interface JobPosting {
   id: string;
+  externalJobId?: string;
+  applyUrl?: string;
   companyId: string;
   companyName: string;
   title: string;
@@ -134,6 +137,9 @@ export interface JobApplication {
   status: ApplicationStatus;
   matchScore: number;
   coverNote?: string;
+  phone?: string;
+  portfolioUrl?: string;
+  appliedVia?: "vlink-form" | "external-portal";
   appliedAt: string;
   updatedAt: string;
 }
@@ -177,6 +183,14 @@ export interface UserCertificationProgress {
   updatedAt: string;
 }
 
+export interface AiReadinessReport {
+  executiveSummary: string;
+  strengths: string[];
+  criticalGaps: string[];
+  actionPlan: string[];
+  benchmarkComparison: string;
+}
+
 export interface SkillAssessmentRecord {
   id: string;
   userId: string;
@@ -186,6 +200,8 @@ export interface SkillAssessmentRecord {
   dimensions: Record<string, number>;
   missingCoreSkills: string[];
   recommendations: string[];
+  aiSource?: string;
+  aiReport?: AiReadinessReport;
   completedAt: string;
 }
 

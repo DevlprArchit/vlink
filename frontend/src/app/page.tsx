@@ -13,14 +13,18 @@ import {
   Heart,
   ImagePlus,
   MessageCircle,
+  Pencil,
   Plus,
   Repeat2,
   Send,
   Share2,
   ShieldCheck,
   Sparkles,
+  Trash2,
   TrendingUp,
   Users,
+  X,
+  Check,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { CommunityGroup, Post, PublicProfile } from "@/lib/types";
@@ -194,6 +198,15 @@ export default function HomeFeedPage() {
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
+
+  // Edit / Delete post state (LinkedIn-style author controls)
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   // Create group state
   const [showNewGroup, setShowNewGroup] = useState(false);
@@ -371,6 +384,64 @@ export default function HomeFeedPage() {
     }));
   }
 
+  function startEditPost(post: HydratedPost) {
+    setEditingPostId(post.id);
+    setEditTitle(post.title || "");
+    setEditContent(post.content || "");
+    setEditTags((post.tags || []).join(", "));
+    setConfirmDeleteId(null);
+  }
+
+  async function handleSavePostEdit(postId: string) {
+    if (!editContent.trim()) return;
+    setSavingEdit(true);
+    try {
+      const tags = editTags
+        .split(",")
+        .map((t) => t.trim().replace(/^#/, ""))
+        .filter(Boolean);
+      const res = await fetch("/api/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId,
+          action: "edit",
+          title: editTitle.trim(),
+          content: editContent.trim(),
+          tags,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { post: HydratedPost };
+        setPosts((prev) => prev.map((p) => (p.id === postId ? data.post : p)));
+        setEditingPostId(null);
+        setToast("Post updated!");
+      } else {
+        setToast("Unable to update post.");
+      }
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleDeletePost(postId: string) {
+    setDeletingPostId(postId);
+    try {
+      const res = await fetch(`/api/posts?postId=${encodeURIComponent(postId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+        setConfirmDeleteId(null);
+        setToast("Post deleted!");
+      } else {
+        setToast("Unable to delete post.");
+      }
+    } finally {
+      setDeletingPostId(null);
+    }
+  }
+
   // Trending: sort by likes desc
   const displayedPosts =
     scope === "trending"
@@ -402,12 +473,16 @@ export default function HomeFeedPage() {
             Welcome back{user ? `, ${user.name.split(" ")[0]}` : ""}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            {user ? `Your profile is ${user.readinessScore}% ready for ${user.targetRole || "engineering roles"}. Practice an AI mock interview or browse verified campus opportunities.` : "Join your campus talent network to verify your technical skills, prepare for corporate placement drives, and connect with peers."}
+            {user
+              ? user.readinessScore > 0
+                ? `Your AI-verified DRI score is ${user.readinessScore}/100 for ${user.targetRole || "engineering roles"}. Practice an AI mock interview or browse verified opportunities.`
+                : `Welcome to V-Link! Your DRI score is pending — complete the AI Readiness Diagnostic to generate your verified DRI Score & Report.`
+              : "Join your campus talent network to verify your technical skills, prepare for corporate placement drives, and connect with peers."}
           </p>
           <div className="pt-2 flex flex-wrap items-center gap-2.5">
             <Link href="/readiness" className="btn-dibs-primary text-xs">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>AI Mock Interview</span>
+              <span>{user && user.readinessScore === 0 ? "Take AI DRI Test" : "AI Readiness & Mock Interview"}</span>
             </Link>
             <Link href="/jobs" className="btn-dibs-secondary text-xs">
               <span>Explore Jobs</span>
@@ -421,9 +496,13 @@ export default function HomeFeedPage() {
           <div className="shrink-0 flex items-center gap-4 p-4 rounded-2xl bg-slate-50/80 border border-slate-100">
             <ProgressRing score={readinessScore} />
             <div className="space-y-0.5">
-              <div className="text-xs font-bold text-slate-900">Readiness Score</div>
-              <div className="text-sm font-extrabold text-[#4F46E5]">{user.readinessScore}/100</div>
-              <div className="text-[11px] text-slate-500 font-medium">{user.readinessTier}</div>
+              <div className="text-xs font-bold text-slate-900">AI DRI Score</div>
+              <div className="text-sm font-extrabold text-[#4F46E5]">
+                {user.readinessScore > 0 ? `${user.readinessScore}/100` : "Pending"}
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium">
+                {user.readinessScore > 0 ? user.readinessTier : "Take Diagnostic"}
+              </div>
             </div>
           </div>
         )}
@@ -505,23 +584,23 @@ export default function HomeFeedPage() {
                 <p className="mt-0.5 text-xs text-slate-600">{user.headline}</p>
                 <p className="mt-1 text-[11px] font-medium text-slate-500">{user.campus}</p>
 
-                <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
-                  <div className="flex items-center justify-between text-xs font-semibold text-emerald-900">
-                    <span>Career Readiness</span>
-                    <span className="text-sm font-extrabold text-emerald-700">
-                      {user.readinessScore}/100
+                <div className={`mt-4 rounded-xl border p-3 ${user.readinessScore > 0 ? "border-emerald-100 bg-emerald-50/70" : "border-amber-200 bg-amber-50/60"}`}>
+                  <div className={`flex items-center justify-between text-xs font-semibold ${user.readinessScore > 0 ? "text-emerald-900" : "text-amber-900"}`}>
+                    <span>AI Career Readiness</span>
+                    <span className={`text-sm font-extrabold ${user.readinessScore > 0 ? "text-emerald-700" : "text-amber-700"}`}>
+                      {user.readinessScore > 0 ? `${user.readinessScore}/100` : "Pending"}
                     </span>
                   </div>
-                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-emerald-200">
+                  <div className={`mt-1.5 h-2 w-full overflow-hidden rounded-full ${user.readinessScore > 0 ? "bg-emerald-200" : "bg-amber-200"}`}>
                     <div
-                      className="h-full rounded-full bg-emerald-600 transition-all"
+                      className={`h-full rounded-full transition-all ${user.readinessScore > 0 ? "bg-emerald-600" : "bg-amber-500"}`}
                       style={{ width: `${user.readinessScore}%` }}
                     />
                   </div>
-                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-emerald-700">
-                    <span>{user.readinessTier}</span>
+                  <div className={`mt-1.5 flex items-center justify-between text-[11px] ${user.readinessScore > 0 ? "text-emerald-700" : "text-amber-800"}`}>
+                    <span>{user.readinessScore > 0 ? user.readinessTier : "Not evaluated yet"}</span>
                     <Link href="/readiness" className="font-semibold underline">
-                      Run Diagnostic
+                      {user.readinessScore > 0 ? "View Report" : "Take DRI Test"}
                     </Link>
                   </div>
                 </div>
@@ -850,14 +929,37 @@ export default function HomeFeedPage() {
                         <div className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
                           <Clock className="h-3 w-3" />
                           {timeAgo(post.createdAt)}
+                          {post.updatedAt && <span className="text-slate-400">· edited</span>}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {post.groupName && (
-                        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
+                        <span className="hidden sm:inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
                           {post.groupName}
                         </span>
+                      )}
+                      {user && post.authorId === user.id && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEditPost(post)}
+                            title="Edit post"
+                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200/70"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(confirmDeleteId === post.id ? null : post.id)}
+                            title="Delete post"
+                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-50 border border-rose-200/70"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </button>
+                        </>
                       )}
                       <button
                         type="button"
@@ -872,13 +974,84 @@ export default function HomeFeedPage() {
                     </div>
                   </div>
 
-                  {/* Post content */}
-                  {post.title && (
-                    <h3 className="mt-3 text-base font-bold text-slate-900">{post.title}</h3>
+                  {/* Inline Delete Confirmation */}
+                  {confirmDeleteId === post.id && (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs">
+                      <span className="font-semibold text-rose-800">
+                        Delete this post permanently?
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingPostId === post.id}
+                          onClick={() => void handleDeletePost(post.id)}
+                          className="rounded-lg bg-rose-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+                        >
+                          {deletingPostId === post.id ? "Deleting..." : "Confirm Delete"}
+                        </button>
+                      </div>
+                    </div>
                   )}
-                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-800 font-normal">
-                    {post.content}
-                  </p>
+
+                  {/* Post content or Inline Edit Mode */}
+                  {editingPostId === post.id ? (
+                    <div className="mt-3 space-y-2.5 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3.5">
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Headline (optional)"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500"
+                      />
+                      <textarea
+                        rows={4}
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        placeholder="Edit your post..."
+                        className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500"
+                      />
+                      <input
+                        type="text"
+                        value={editTags}
+                        onChange={(e) => setEditTags(e.target.value)}
+                        placeholder="Tags (comma separated)"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-indigo-500"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPostId(null)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          <X className="h-3.5 w-3.5" /> Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingEdit || !editContent.trim()}
+                          onClick={() => void handleSavePostEdit(post.id)}
+                          className="inline-flex items-center gap-1 rounded-lg btn-dibs-primary px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                        >
+                          <Check className="h-3.5 w-3.5" /> {savingEdit ? "Saving..." : "Save Changes"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {post.title && (
+                        <h3 className="mt-3 text-base font-bold text-slate-900">{post.title}</h3>
+                      )}
+                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-800 font-normal">
+                        {post.content}
+                      </p>
+                    </>
+                  )}
 
                   {/* Project card */}
                   {post.projectRef && (

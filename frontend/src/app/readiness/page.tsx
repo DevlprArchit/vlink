@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Award,
   BarChart2,
@@ -271,12 +272,25 @@ function AnimatedScore({ target }: { target: number }) {
   return <>{displayed}</>;
 }
 
-export default function ReadinessSuitePage() {
+function getAiHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const key = localStorage.getItem("vlink_gemini_api_key");
+    if (key?.trim()) headers["x-gemini-api-key"] = key.trim();
+  } catch {
+    // ignore storage errors
+  }
+  return headers;
+}
+
+function ReadinessSuiteContent() {
+  const searchParams = useSearchParams();
   const { user, setUser, setAuthModalOpen, refreshNotifications } = useAuth();
   const [tab, setTab] = useState<"diagnostic" | "roadmap" | "certs" | "ai-studio">(
     "diagnostic"
   );
   const [targetRole, setTargetRole] = useState("Full-Stack Software Engineer");
+  const [jobFocusSkills, setJobFocusSkills] = useState<string[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submittingDiag, setSubmittingDiag] = useState(false);
   const [diagBanner, setDiagBanner] = useState("");
@@ -337,10 +351,25 @@ export default function ReadinessSuitePage() {
   }, [loadReadinessData]);
 
   useEffect(() => {
-    if (user?.targetRole) {
+    const t = searchParams.get("tab");
+    const role = searchParams.get("role");
+    const skills = searchParams.get("skills");
+    if (t === "ai-studio" || t === "roadmap" || t === "certs" || t === "diagnostic") {
+      setTab(t);
+    }
+    if (role) {
+      setTargetRole(role);
+    }
+    if (skills) {
+      setJobFocusSkills(skills.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (user?.targetRole && !searchParams.get("role")) {
       setTargetRole(user.targetRole);
     }
-  }, [user?.targetRole]);
+  }, [user?.targetRole, searchParams]);
 
   async function handleRunDiagnostic(e: React.FormEvent) {
     e.preventDefault();
@@ -360,7 +389,7 @@ export default function ReadinessSuitePage() {
       }));
       const res = await fetch("/api/readiness", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAiHeaders(),
         body: JSON.stringify({ targetRole, weeklyHours: 10, diagnosticAnswers }),
       });
       if (res.ok) {
@@ -464,12 +493,15 @@ export default function ReadinessSuitePage() {
     }
     setInterviewFeedback(null);
     setInterviewAnswer("");
+    const focus = jobFocusSkills?.length
+      ? jobFocusSkills
+      : user.skills.slice(0, 4).map((s) => s.name);
     const res = await fetch("/api/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAiHeaders(),
       body: JSON.stringify({
         task: "mock-interview-start",
-        payload: { targetRole, focusSkills: user.skills.slice(0, 3).map((s) => s.name) },
+        payload: { targetRole, focusSkills: focus },
       }),
     });
     if (res.ok) {
@@ -484,7 +516,7 @@ export default function ReadinessSuitePage() {
     if (!q || !interviewAnswer.trim()) return;
     const res = await fetch("/api/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAiHeaders(),
       body: JSON.stringify({
         task: "mock-interview-evaluate",
         payload: {
@@ -654,62 +686,129 @@ export default function ReadinessSuitePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Readiness Signal
+                    AI Readiness Signal
                   </span>
                   <div className="mt-1 flex items-baseline gap-2">
                     <span className="text-4xl font-black text-slate-900 font-bold">
-                      {score > 0 ? <AnimatedScore target={score} /> : 0}
+                      {score > 0 ? <AnimatedScore target={score} /> : "—"}
                     </span>
                     <span className="text-sm font-semibold text-slate-500">/ 100</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                    {user?.readinessTier || "Run Diagnostic"}
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      score > 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800 border border-amber-200"
+                    }`}
+                  >
+                    {score > 0 ? (user?.readinessTier || "Evaluated") : "Diagnostic Pending"}
                   </span>
                   {score >= 65 && (
                     <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-700">
-                      🏆 Top 25% of {targetRole.split(" ")[0]} Devs
+                      🏆 Top Cohort Bracket ({targetRole.split(" ")[0]})
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Radar Chart */}
-              {Object.keys(dims).length >= 3 && (
-                <div className="mt-4">
-                  <RadarChart dims={dims} />
+              {score === 0 && !latestAssessment ? (
+                <div className="mt-5 rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-5 text-center space-y-2">
+                  <Sparkles className="h-7 w-7 text-amber-500 mx-auto" />
+                  <h3 className="text-sm font-bold text-slate-900">
+                    AI DRI Score &amp; Report Not Generated Yet
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    New profiles start at <strong>Pending</strong> so your score reflects verified ability rather than an arbitrary guess. Complete the 5-question diagnostic to generate your personalized AI DRI Report!
+                  </p>
                 </div>
+              ) : (
+                <>
+                  {/* Radar Chart */}
+                  {Object.keys(dims).length >= 3 && (
+                    <div className="mt-4">
+                      <RadarChart dims={dims} />
+                    </div>
+                  )}
+
+                  {/* Bar dims */}
+                  <div className="mt-4 space-y-2.5">
+                    {Object.entries(dims).map(([label, val]) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-xs font-medium text-slate-800">
+                          <span>{label}</span>
+                          <span className="font-bold">{val}%</span>
+                        </div>
+                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/60">
+                          <div
+                            className="h-full rounded-full bg-indigo-500 transition-all"
+                            style={{ width: `${val}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
-              {/* Bar dims */}
-              <div className="mt-4 space-y-2.5">
-                {Object.entries(dims).map(([label, val]) => (
-                  <div key={label}>
-                    <div className="flex justify-between text-xs font-medium text-slate-800">
-                      <span>{label}</span>
-                      <span className="font-bold">{val}%</span>
+              {/* AI-Generated DRI Diagnostic Report */}
+              {latestAssessment && (
+                <div className="mt-5 space-y-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/40 p-4 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 font-extrabold text-slate-900">
+                      <Sparkles className="h-4 w-4 text-indigo-600" />
+                      <span>AI DRI Diagnostic Report</span>
                     </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/60">
-                      <div
-                        className="h-full rounded-full bg-indigo-500 transition-all"
-                        style={{ width: `${val}%` }}
-                      />
-                    </div>
+                    {latestAssessment.aiSource && (
+                      <span className="rounded-full bg-white border border-indigo-200 px-2 py-0.5 text-[10px] font-mono font-semibold text-indigo-700">
+                        {latestAssessment.aiSource}
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
 
-              {latestAssessment && latestAssessment.recommendations.length > 0 && (
-                <div className="mt-5 rounded-xl bg-slate-50/80 border border-slate-200/60 p-3.5">
-                  <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-900 font-bold">
-                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" /> AI Action Plan
-                  </div>
-                  <ul className="list-disc space-y-1 pl-4 text-xs text-slate-600">
-                    {latestAssessment.recommendations.map((rec, i) => (
-                      <li key={i}>{rec}</li>
-                    ))}
-                  </ul>
+                  {latestAssessment.aiReport?.executiveSummary && (
+                    <p className="text-slate-700 leading-relaxed font-medium">
+                      {latestAssessment.aiReport.executiveSummary}
+                    </p>
+                  )}
+
+                  {latestAssessment.aiReport?.strengths && latestAssessment.aiReport.strengths.length > 0 && (
+                    <div>
+                      <div className="font-bold text-emerald-800 mb-1">✓ Verified Strengths</div>
+                      <ul className="list-disc space-y-0.5 pl-4 text-slate-700">
+                        {latestAssessment.aiReport.strengths.map((s, idx) => (
+                          <li key={idx}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {latestAssessment.aiReport?.criticalGaps && latestAssessment.aiReport.criticalGaps.length > 0 && (
+                    <div>
+                      <div className="font-bold text-amber-800 mb-1">⚠ Focus Areas &amp; Skill Gaps</div>
+                      <ul className="list-disc space-y-0.5 pl-4 text-slate-700">
+                        {latestAssessment.aiReport.criticalGaps.map((g, idx) => (
+                          <li key={idx}>{g}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {latestAssessment.recommendations && latestAssessment.recommendations.length > 0 && (
+                    <div>
+                      <div className="font-bold text-indigo-900 mb-1">⚡ AI Action Plan</div>
+                      <ul className="list-disc space-y-0.5 pl-4 text-slate-700">
+                        {latestAssessment.recommendations.map((rec, i) => (
+                          <li key={i}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {latestAssessment.aiReport?.benchmarkComparison && (
+                    <div className="rounded-lg bg-white/80 border border-indigo-100 p-2 text-[11px] font-semibold text-indigo-900">
+                      📊 {latestAssessment.aiReport.benchmarkComparison}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1200,7 +1299,7 @@ export default function ReadinessSuitePage() {
                 </div>
               </div>
               <p className="mt-1 text-xs text-slate-500 font-mono">
-                Practice role-specific technical questions and get structured rubric feedback.
+                Practice role-specific technical questions for <strong className="text-slate-700">{targetRole}</strong>{jobFocusSkills?.length ? ` (${jobFocusSkills.join(", ")})` : ""} and get structured AI feedback.
               </p>
 
               {interviewQs.length > 0 && (
@@ -1467,5 +1566,19 @@ export default function ReadinessSuitePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ReadinessSuitePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-xs font-mono text-slate-500">
+          Loading AI Career Readiness Suite...
+        </div>
+      }
+    >
+      <ReadinessSuiteContent />
+    </Suspense>
   );
 }

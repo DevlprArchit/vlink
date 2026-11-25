@@ -234,10 +234,14 @@ export default function ProfilePage() {
     setIsAuditing(true);
     setTimeout(() => {
       setIsAuditing(false);
+      const scoreText =
+        user && user.readinessScore > 0
+          ? `Validated AI DRI score for '${user.targetRole || "Full-Stack Software Engineer"}' is ${user.readinessScore}/100 (${user.readinessTier}).`
+          : `DRI diagnostic has not been completed yet (0/100). Visit the Readiness Engine (/readiness) to generate your AI DRI score & report.`;
       setSenseInsight(
-        `✦ V-Link AI Portfolio Diagnostic: Candidate exhibits top-quartile full-stack velocity with ${user?.skills.length || 0} technical skills (${verifiedSkillsCount} verified). Demonstrated readiness for '${user?.targetRole || "Full-Stack Software Engineer"}' stands at an exceptional ${user?.readinessScore || 85}% (Elite Tier). Recommended next step: complete AWS architecture review to push DRI to 92%.`
+        `✦ V-Link AI Portfolio Diagnostic: Candidate showcases ${user?.skills.length || 0} technical skills (${verifiedSkillsCount} verified) and ${user?.projects.length || 0} project(s). ${scoreText}`
       );
-    }, 1200);
+    }, 800);
   }
 
   const filteredSkills = user.skills.filter((s) =>
@@ -379,8 +383,19 @@ export default function ProfilePage() {
             </div>
             <div className="sense-card p-3.5 text-center bg-white border border-slate-200/60 shadow-xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Readiness DRI</div>
-              <div className="mt-1 text-xl font-black text-[#00A878]">{user.readinessScore}%</div>
-              <div className="text-[10px] text-emerald-600 font-mono font-semibold">Elite Tier</div>
+              {user.readinessScore > 0 ? (
+                <>
+                  <div className="mt-1 text-xl font-black text-[#00A878]">{user.readinessScore}%</div>
+                  <div className="text-[10px] text-emerald-600 font-mono font-semibold truncate">{user.readinessTier}</div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-1 text-base font-black text-amber-600">Pending</div>
+                  <Link href="/readiness" className="text-[10px] text-indigo-600 underline font-mono font-semibold">
+                    Take AI DRI Test
+                  </Link>
+                </>
+              )}
             </div>
             <div className="sense-card p-3.5 text-center bg-white border border-slate-200/60 shadow-xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Shipped Projects</div>

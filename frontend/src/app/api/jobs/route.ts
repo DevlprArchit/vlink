@@ -148,6 +148,8 @@ export async function POST(req: NextRequest) {
 
     const newJob: JobPosting = {
       id: `job-${Date.now()}`,
+      externalJobId: String(body.externalJobId || `REQ-VLINK-${Math.floor(100000 + Math.random() * 899999)}`).trim(),
+      applyUrl: String(body.applyUrl || `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title + " " + companyName)}`).trim(),
       title,
       companyId,
       companyName,
@@ -203,6 +205,9 @@ export async function POST(req: NextRequest) {
     status: "applied" as ApplicationStatus,
     matchScore: body.matchScore ?? fallbackMatch,
     coverNote: body.coverNote?.trim() || undefined,
+    phone: body.phone?.trim() || undefined,
+    portfolioUrl: body.portfolioUrl?.trim() || undefined,
+    appliedVia: (body.appliedVia === "external-portal" ? "external-portal" : "vlink-form") as "vlink-form" | "external-portal",
     appliedAt: now,
     updatedAt: now,
   };

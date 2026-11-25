@@ -26,6 +26,9 @@ import {
   Trash2,
   Building2,
   FileSearch,
+  Menu,
+  X,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthGateModal } from "./AuthGateModal";
@@ -50,7 +53,7 @@ const INITIAL_COPILOT_MESSAGES: CopilotMessage[] = [
   {
     id: "welcome-1",
     sender: "ai",
-    text: "👋 Hi! I am your V-Link AI Mentor. Ask me about boosting your Demonstrable Readiness Index (DRI), optimizing your resume for ATS, technical interview prep, or exploring campus hiring drives.",
+    text: "👋 Hey! I'm your V-Link AI Mentor. Say hello, ask me any general or coding question, get help drafting resume bullets, or ask about your career readiness!",
     time: "Just now",
   },
 ];
@@ -104,7 +107,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [copilotInput, setCopilotInput] = useState("");
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>(INITIAL_COPILOT_MESSAGES);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [geminiKey, setGeminiKey] = useState("");
+  const [showKeyInput, setShowKeyInput] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("vlink_gemini_api_key");
+      if (saved) setGeminiKey(saved);
+    } catch {
+      // ignore storage access issues
+    }
+  }, []);
+
+  function handleSaveGeminiKey(val: string) {
+    setGeminiKey(val);
+    try {
+      if (val.trim()) {
+        localStorage.setItem("vlink_gemini_api_key", val.trim());
+      } else {
+        localStorage.removeItem("vlink_gemini_api_key");
+      }
+    } catch {
+      // ignore storage issues
+    }
+  }
 
   function handleClearChat() {
     setCopilotMessages(INITIAL_COPILOT_MESSAGES);
@@ -122,6 +150,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       time: timeStr,
     };
 
+    const nextHistory = [...copilotMessages, userMsg].slice(-8).map((m) => ({
+      sender: m.sender,
+      text: m.text,
+    }));
+
     setCopilotMessages((prev) => [...prev, userMsg]);
     if (!overrideText) {
       setCopilotInput("");
@@ -129,17 +162,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setCopilotLoading(true);
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (geminiKey.trim()) {
+        headers["x-gemini-api-key"] = geminiKey.trim();
+      }
       const res = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           task: "copilot-chat",
           payload: {
             message: textToSend,
+            history: nextHistory.slice(0, -1),
             context: {
               userName: user?.name,
               targetRole: user?.targetRole,
               readinessScore: user?.readinessScore,
+              campus: user?.campus,
+              skills: user?.skills.map((s) => s.name) || [],
             },
           },
         }),
@@ -150,7 +190,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         const replyText =
           json?.data?.reply ||
           json?.reply ||
-          "I am analyzing your profile data. Check /readiness for detailed recommendations.";
+          "I am here! How can I assist you next?";
         const aiMsg: CopilotMessage = {
           id: `ai-${Date.now()}`,
           sender: "ai",
@@ -162,7 +202,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         const errMsg: CopilotMessage = {
           id: `ai-err-${Date.now()}`,
           sender: "ai",
-          text: "I encountered a connection issue. Please make sure the service is online or try again.",
+          text: "I encountered a temporary connection issue. Please try asking again!",
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setCopilotMessages((prev) => [...prev, errMsg]);
@@ -398,10 +438,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Readiness Ticker */}
                 <Link
                   href="/readiness"
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-mono font-bold text-[#00A878] transition hover:bg-emerald-100/60 shadow-xs"
+                  className={`hidden sm:inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono font-bold transition shadow-xs ${
+                    user.readinessScore > 0
+                      ? "border-emerald-200 bg-emerald-50 text-[#00A878] hover:bg-emerald-100/60"
+                      : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100/60"
+                  }`}
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-400 shrink-0 animate-pulse" />
-                  <span>DRI {user.readinessScore}%</span>
+                  <Sparkles className={`h-3.5 w-3.5 shrink-0 ${user.readinessScore > 0 ? "text-emerald-500 animate-pulse" : "text-amber-500"}`} />
+                  <span>{user.readinessScore > 0 ? `DRI ${user.readinessScore}%` : "DRI Pending"}</span>
                 </Link>
 
                 {/* Notifications */}
@@ -507,42 +551,81 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setAuthModalOpen(true)}
-                className="btn-1of1-primary text-xs"
+                className="btn-dibs-primary text-xs py-1.5 px-3"
               >
                 <LogIn className="h-3.5 w-3.5 shrink-0" />
-                <span>Access Node</span>
+                <span>Sign In</span>
               </button>
             )}
+
+            {/* Mobile / Tablet Top Menu Toggle (replaces bottom navbar) */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-label="Toggle navigation menu"
+              className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-xs shrink-0"
+            >
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
           </div>
         </div>
 
-        {/* Medium-screen secondary nav */}
-        <div className="hidden md:flex lg:hidden items-center gap-1 overflow-x-auto border border-white/90 px-3 py-1 bg-white/80 rounded-xl mt-1.5 backdrop-blur-xl">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href;
-            return (
+        {/* Clean Collapsible Top Navigation Drawer (< lg screens) */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden mt-2 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-xl backdrop-blur-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="relative md:hidden">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search peers, skills, roles..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-[#4F46E5]"
+              />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                      active
+                        ? "bg-indigo-50 text-[#4F46E5] font-bold border border-indigo-200/70"
+                        : "text-slate-700 hover:bg-slate-50 border border-transparent"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
               <Link
-                key={item.href}
-                href={item.href}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
-                  active ? "bg-white text-[#4F46E5] font-bold shadow-xs" : "text-slate-600 hover:text-slate-900"
+                href="/tpo"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                  pathname === "/tpo"
+                    ? "bg-indigo-50 text-[#4F46E5] font-bold border border-indigo-200/70"
+                    : "text-slate-700 hover:bg-slate-50 border border-transparent"
                 }`}
               >
-                <Icon className="h-3 w-3 shrink-0" />
-                <span>{item.label}</span>
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                <span>TPO Hub</span>
               </Link>
-            );
-          })}
-        </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* â”€â”€â”€ Main Content Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-3 sm:px-6 py-6 pb-28 md:pb-16">
+      {/* Main Content Canvas */}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-16">
         {children}
       </main>
 
-      {/* â”€â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Footer */}
       <footer className="no-print mt-auto border-t border-slate-200/60 bg-white/60 px-4 sm:px-6 py-4 text-xs text-slate-600 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-3 font-mono text-[11px]">
           <div className="flex items-center gap-2">
@@ -551,7 +634,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-slate-600">/</span>
             <span className="text-slate-400">AUTONOMOUS CAREER & TALENT CLOUD</span>
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-500">
             <Link href="/readiness" className="hover:text-[#4F46E5] transition">Readiness Engine</Link>
             <Link href="/resume" className="hover:text-[#4F46E5] transition">ATS Studio</Link>
             <Link href="/jobs" className="hover:text-[#4F46E5] transition">Job Radar</Link>
@@ -560,32 +643,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      {/* â”€â”€â”€ Mobile Bottom Nav (<768px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <nav className="fixed bottom-2 left-2 right-2 sm:left-3 sm:right-3 z-50 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-2xl md:hidden no-print shadow-xl p-1">
-        <div className="flex items-stretch justify-around">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[9px] font-semibold transition-all min-w-0 ${
-                  active ? "text-[#4F46E5] font-bold" : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[#4F46E5]" : "text-slate-400"}`} />
-                <span className="truncate max-w-[44px] text-center leading-none">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-
       {/* ─── Floating "✦ V-Link AI Mentor" Real Conversational HUD ──── */}
-      <div className="fixed bottom-16 md:bottom-6 right-2 sm:right-6 z-40 no-print flex flex-col items-end max-w-[calc(100vw-1rem)]">
+      <div className="fixed bottom-4 sm:bottom-6 right-3 sm:right-6 z-40 no-print flex flex-col items-end max-w-[calc(100vw-1.5rem)]">
         {copilotOpen && (
-          <div className="mb-3 w-[calc(100vw-1rem)] sm:w-[420px] max-w-[420px] h-[480px] max-h-[75vh] flex flex-col card-dibs shadow-2xl border border-white/95 bg-white/95 backdrop-blur-3xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="mb-3 w-[calc(100vw-1.5rem)] sm:w-[420px] max-w-[420px] h-[490px] max-h-[78vh] flex flex-col card-dibs shadow-2xl border border-white/95 bg-white/95 backdrop-blur-3xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Copilot Header */}
             <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-slate-100 bg-white/60">
               <div className="flex items-center gap-2.5">
@@ -594,10 +655,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
                 <div>
                   <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">V-Link AI Mentor</h4>
-                  <p className="text-[10px] text-slate-500 font-medium">AI Career Coach & Placement Intelligence</p>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    {geminiKey.trim() ? "✦ Gemini Cloud LLM Connected" : "✦ Conversational AI & Knowledge Engine"}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowKeyInput((p) => !p)}
+                  title="Connect Gemini API Key (optional)"
+                  className={`text-[11px] p-1.5 rounded-full transition ${
+                    geminiKey.trim()
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={handleClearChat}
@@ -615,6 +690,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             </div>
+
+            {showKeyInput && (
+              <div className="px-3.5 py-2.5 bg-indigo-50/70 border-b border-indigo-100 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-900">
+                  <span>Optional: Connect Google Gemini API Key</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyInput(false)}
+                    className="text-indigo-600 hover:underline"
+                  >
+                    Done
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  value={geminiKey}
+                  onChange={(e) => handleSaveGeminiKey(e.target.value)}
+                  placeholder="Paste AIza... Gemini key for live LLM boost"
+                  className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] text-slate-800 outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
 
             {/* Quick Suggestion Chips */}
             <div className="px-3 py-2 border-b border-slate-100/80 bg-slate-50/60 flex items-center gap-1.5 overflow-x-auto scrollbar-none">

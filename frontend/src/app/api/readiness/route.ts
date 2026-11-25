@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
 import { callAiService } from "@/lib/ai-client";
+import { generateAiReadinessAssessment } from "@/lib/llm";
 import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
 
 export async function GET() {
@@ -67,6 +68,19 @@ export async function POST(req: NextRequest) {
       };
     });
 
+  const geminiApiKey = req.headers.get("x-gemini-api-key") || undefined;
+
+  const aiEval = await generateAiReadinessAssessment({
+    userName: user.name,
+    targetRole,
+    skills: user.skills,
+    projects: user.projects,
+    certifications: userCerts,
+    diagnosticAnswers: body.diagnosticAnswers || [],
+    geminiApiKey,
+  });
+
+  // Also allow local Python FastAPI microservice to enrich scores when running locally
   const readinessRes = await callAiService(
     "/api/ai/readiness-score",
     {
@@ -87,55 +101,20 @@ export async function POST(req: NextRequest) {
       certifications: userCerts,
       diagnostic_answers: body.diagnosticAnswers || [],
     },
-    () => {
-      const correct = (body.diagnosticAnswers || []).filter(
-        (a) => a.selected_option === a.correct_option
-      ).length;
-      const diagScore = body.diagnosticAnswers?.length
-        ? Math.round((correct / body.diagnosticAnswers.length) * 100)
-        : 65;
-      const skillAvg = user.skills.length
-        ? Math.round(user.skills.reduce((acc, s) => acc + s.level, 0) / user.skills.length)
-        : 50;
-      const projScore = Math.min(100, user.projects.length * 32 + 20);
-      const certDone = userCerts.filter((c) => c.completed).length;
-      const certScore = Math.min(100, certDone * 35 + userCerts.length * 15);
-      const verifiedCount = user.skills.filter((s) => s.verified).length;
-      const verifScore = Math.min(100, verifiedCount * 28);
-      const overall = Math.min(
-        98,
-        Math.max(
-          25,
-          Math.round(0.3 * skillAvg + 0.25 * diagScore + 0.2 * projScore + 0.15 * certScore + 0.1 * verifScore)
-        )
-      );
-      return {
-        overall_score: overall,
-        tier: overall >= 80 ? "Interview Ready" : overall >= 65 ? "Strong Contender" : "Building Momentum",
-        target_role: targetRole,
-        dimension_scores: {
-          "Core Skills": skillAvg,
-          "Diagnostic": diagScore,
-          "Projects": projScore,
-          "Certifications": certScore,
-          "Verification": verifScore,
-          "Coverage": Math.min(100, user.skills.length * 14),
-        },
-        skill_breakdown: user.skills.map((s) => ({
-          skill: s.name,
-          score: s.level,
-          verified: s.verified,
-          status: s.verified ? "Verified" : "Developing",
-        })),
-        missing_core_skills: ["Docker", "Testing"].filter(
-          (reqSkill) => !user.skills.some((s) => s.name.toLowerCase() === reqSkill.toLowerCase())
-        ),
-        recommendations: [
-          "Verify core skills via the Skill Verification quizzes to boost recruiter confidence.",
-          "Complete a free cloud/testing certification from the Certifications Hub.",
-        ],
-      };
-    }
+    () => ({
+      overall_score: aiEval.overall_score,
+      tier: aiEval.tier,
+      target_role: targetRole,
+      dimension_scores: aiEval.dimension_scores,
+      skill_breakdown: user.skills.map((s) => ({
+        skill: s.name,
+        score: s.level,
+        verified: s.verified,
+        status: s.verified ? "Verified" : "Developing",
+      })),
+      missing_core_skills: aiEval.missing_core_skills,
+      recommendations: aiEval.recommendations,
+    })
   );
 
   const scoreData = readinessRes.data;
@@ -152,6 +131,8 @@ export async function POST(req: NextRequest) {
     dimensions: scoreData.dimension_scores,
     missingCoreSkills: scoreData.missing_core_skills,
     recommendations: scoreData.recommendations,
+    aiSource: aiEval.ai_source !== "vlink-ai-diagnostic-engine" ? aiEval.ai_source : readinessRes.source,
+    aiReport: aiEval.ai_report,
     completedAt: new Date().toISOString(),
   };
   db.assessments.unshift(assessmentRecord);
@@ -250,7 +231,7 @@ export async function PATCH(req: NextRequest) {
     const ms = roadmap?.milestones.find((m) => m.id === body.milestoneId);
     if (ms) {
       ms.completed = !ms.completed;
-      if (ms.completed) {
+      if (ms.completed && user.readinessScore > 0) {
         user.readinessScore = Math.min(99, user.readinessScore + 2);
       }
       writeDb(db);
@@ -277,7 +258,7 @@ export async function PATCH(req: NextRequest) {
         updatedAt: new Date().toISOString(),
       });
     }
-    if (completed) {
+    if (completed && user.readinessScore > 0) {
       user.readinessScore = Math.min(99, user.readinessScore + 3);
     }
     writeDb(db);
