@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
 import { callAiService } from "@/lib/ai-client";
-import { createNotification, readDb, writeDb } from "@/lib/store";
+import { createNotification, readDbAsync, writeDbAsync } from "@/lib/store";
 import { ApplicationStatus, JobPosting } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
-  const db = readDb();
+  const db = await readDbAsync();
   const userId = await getSessionUserId();
   const q = (req.nextUrl.searchParams.get("q") || "").trim().toLowerCase();
   const location = (req.nextUrl.searchParams.get("location") || "").trim().toLowerCase();
@@ -105,7 +108,7 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -174,7 +177,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ success: true, job: newJob }, { status: 201 });
   }
 
@@ -220,7 +223,7 @@ export async function POST(req: NextRequest) {
     body: `Your application to ${job.companyName} is recorded with status 'applied'.`,
     link: "/jobs",
   });
-  writeDb(db);
+  await writeDbAsync(db);
 
   return NextResponse.json({ application: { ...app, job } }, { status: 201 });
 }
@@ -230,7 +233,7 @@ export async function PATCH(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -252,7 +255,7 @@ export async function PATCH(req: NextRequest) {
     }
     app.status = body.status;
     app.updatedAt = new Date().toISOString();
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ application: app });
   }
 
@@ -270,7 +273,7 @@ export async function PATCH(req: NextRequest) {
         user.followedCompanies.push(company.id);
       }
     }
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ company });
   }
 

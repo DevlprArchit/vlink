@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth";
+import { getSessionUserId, PROFILE_COOKIE_NAME, signJsonToken } from "@/lib/auth";
 import { callAiService } from "@/lib/ai-client";
 import {
   analyzeResumeAts,
   callCloudLLM,
   CopilotContext,
   CopilotTurn,
+  generateAiJobDescription,
   generateCopilotReply,
   generateResumeContinuation,
 } from "@/lib/llm";
-import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
+import { createNotification, readDbAsync, toPublicProfile, writeDbAsync } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
-  const db = readDb();
+  const db = await readDbAsync();
   const user = userId ? db.users.find((u) => u.id === userId) : undefined;
   const geminiApiKey = req.headers.get("x-gemini-api-key") || undefined;
 
@@ -25,6 +29,7 @@ export async function POST(req: NextRequest) {
       | "resume-suggest-continuation"
       | "resume-ats-analyze"
       | "copilot-chat"
+      | "job-spec-draft"
       | "mock-interview-start"
       | "mock-interview-evaluate"
       | "verify-skill-questions"
@@ -463,12 +468,43 @@ export async function POST(req: NextRequest) {
         body: `You passed the ${skill} assessment (${res.data.score_percent}%) and unlocked a verified badge on your profile.`,
         link: "/profile",
       });
-      writeDb(db);
+      await writeDbAsync(db);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ...res,
       user: user ? toPublicProfile(user) : null,
+    });
+    if (res.data.passed && user) {
+      response.cookies.set(PROFILE_COOKIE_NAME, signJsonToken(toPublicProfile(user)), {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+    return response;
+  }
+
+  // ── 9. AI Job Spec Draft ──
+  if (body.task === "job-spec-draft") {
+    const p = body.payload || {};
+    const draft = await generateAiJobDescription({
+      title: String(p.title || "Software Engineer"),
+      companyName: String(p.companyName || "Tech Company"),
+      roleType: String(p.roleType || "Full-time"),
+      requiredSkills: Array.isArray(p.requiredSkills)
+        ? p.requiredSkills.map(String).join(", ")
+        : String(p.requiredSkills || ""),
+      geminiApiKey,
+    });
+    return NextResponse.json({
+      ok: true,
+      mode: "ai",
+      provider: draft.provider,
+      data: {
+        description: draft.description,
+      },
     });
   }
 

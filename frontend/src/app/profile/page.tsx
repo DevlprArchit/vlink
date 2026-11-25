@@ -36,7 +36,7 @@ import {
   Cpu
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { PublicProfile, ProjectItem, SkillItem } from "@/lib/types";
+import { PublicProfile, CertificationItem, UserCertificationProgress } from "@/lib/types";
 
 const TECH_COLORS: Record<string, string> = {
   React: "bg-sky-50 text-sky-700 border-sky-200",
@@ -65,15 +65,13 @@ function getInitials(name: string) {
 function calcCompletion(user: PublicProfile): number {
   let score = 0;
   if (user.name) score += 10;
-  if (user.headline) score += 15;
-  if (user.bio && user.bio.length > 25) score += 15;
-  if (user.education) score += 10;
+  if (user.headline && user.headline.trim().length > 0) score += 15;
+  if (user.bio && user.bio.trim().length > 25) score += 15;
+  if (user.education && user.education.trim().length > 0) score += 15;
   if (user.skills.length >= 3) score += 15;
-  if (user.skills.length >= 6) score += 5;
   if (user.projects.length >= 1) score += 15;
-  if (user.projects.length >= 3) score += 5;
-  if (user.targetRole) score += 5;
-  if (user.verifiedCampusBadge) score += 5;
+  if (user.targetRole && user.targetRole.trim().length > 0) score += 5;
+  if (user.readinessScore > 0) score += 10;
   return Math.min(score, 100);
 }
 
@@ -103,6 +101,8 @@ export default function ProfilePage() {
 
   const [senseInsight, setSenseInsight] = useState<string | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [certCatalog, setCertCatalog] = useState<CertificationItem[]>([]);
+  const [certProgress, setCertProgress] = useState<UserCertificationProgress[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -111,6 +111,19 @@ export default function ProfilePage() {
       setTargetRole(user.targetRole || "");
       setEducation(user.education || "");
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/readiness", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          setCertCatalog(data.certifications || []);
+          setCertProgress(data.certProgress || []);
+        }
+      })
+      .catch(() => {});
   }, [user]);
 
   if (!user) {
@@ -230,18 +243,43 @@ export default function ProfilePage() {
     setTimeout(() => setShareToast(false), 2800);
   }
 
-  function triggerSenseAudit() {
+  async function triggerSenseAudit() {
+    if (!user) return;
     setIsAuditing(true);
-    setTimeout(() => {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const savedKey = typeof window !== "undefined" ? localStorage.getItem("vlink_gemini_key") || "" : "";
+      if (savedKey.trim()) headers["x-gemini-api-key"] = savedKey.trim();
+
+      const prompt = `Audit my V-Link student profile concisely in 2-3 sentences. Name: ${user.name}. Target role: ${user.targetRole || "Software Engineer"}. Headline: ${user.headline || "Not set"}. Bio: ${user.bio || "Not set"}. Skills: ${user.skills.map((s) => s.name).join(", ") || "None"}. Projects: ${user.projects.length}. DRI Score: ${user.readinessScore > 0 ? `${user.readinessScore}/100 (${user.readinessTier})` : "Diagnostic Pending (0)"}. Give concrete next steps.`;
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          task: "copilot-chat",
+          payload: {
+            message: prompt,
+            context: {
+              currentPath: "/profile",
+              userName: user.name,
+              targetRole: user.targetRole,
+              readinessScore: user.readinessScore,
+              skills: user.skills.map((s) => s.name),
+            },
+          },
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.reply) {
+        setSenseInsight(`✦ Sense AI Audit (${json.provider === "gemini" ? "Gemini" : "V-Link AI"}): ${json.reply}`);
+      } else {
+        setSenseInsight("Unable to reach Sense AI right now. Try taking the DRI diagnostic on /readiness.");
+      }
+    } catch {
+      setSenseInsight("Network error while contacting Sense AI.");
+    } finally {
       setIsAuditing(false);
-      const scoreText =
-        user && user.readinessScore > 0
-          ? `Validated AI DRI score for '${user.targetRole || "Full-Stack Software Engineer"}' is ${user.readinessScore}/100 (${user.readinessTier}).`
-          : `DRI diagnostic has not been completed yet (0/100). Visit the Readiness Engine (/readiness) to generate your AI DRI score & report.`;
-      setSenseInsight(
-        `✦ V-Link AI Portfolio Diagnostic: Candidate showcases ${user?.skills.length || 0} technical skills (${verifiedSkillsCount} verified) and ${user?.projects.length || 0} project(s). ${scoreText}`
-      );
-    }, 800);
+    }
   }
 
   const filteredSkills = user.skills.filter((s) =>
@@ -409,8 +447,17 @@ export default function ProfilePage() {
             </div>
             <div className="sense-card p-3.5 text-center bg-white border border-slate-200/60 shadow-xs col-span-2 sm:col-span-1">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Campus Standing</div>
-              <div className="mt-1 text-xl font-black text-amber-600">Top 3%</div>
-              <div className="text-[10px] text-slate-400 font-mono">HIET CSE Cohort</div>
+              {user.readinessScore > 0 ? (
+                <>
+                  <div className="mt-1 text-base font-black text-amber-600 truncate">{user.readinessTier}</div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate">{user.department || user.campus}</div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-1 text-base font-black text-slate-500">Unranked</div>
+                  <div className="text-[10px] text-slate-400 font-mono">Take DRI Diagnostic</div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -570,52 +617,71 @@ export default function ProfilePage() {
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-3">
                   <Compass className="h-4 w-4 text-[#4F46E5]" /> About & Technical Mission
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-mono whitespace-pre-line">
-                  {user.bio ||
-                    "Full-stack developer focused on high-concurrency microservices, TypeScript, Next.js, and AI workflows. Building scalable, production-grade applications with modern distributed architectures."}
-                </p>
+                {user.bio ? (
+                  <p className="text-xs text-slate-600 leading-relaxed font-mono whitespace-pre-line">
+                    {user.bio}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400 italic font-mono">
+                    No bio added yet. Click &ldquo;Edit Profile&rdquo; above to add your bio, headline, and career summary.
+                  </p>
+                )}
               </div>
 
               {/* Demonstrable Readiness Index (DRI) Deep-Dive Card */}
               <div className="sense-card p-6 border border-slate-200/80 bg-white/95 shadow-xs">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                   <div className="flex items-center gap-2.5">
                     <Award className="h-5 w-5 text-[#00A878]" />
                     <div>
                       <h3 className="text-sm font-bold text-slate-900">Demonstrable Readiness Index (DRI)</h3>
-                      <p className="text-[11px] text-slate-500 font-mono">Comprehensive 6-Dimensional AI Evaluation</p>
+                      <p className="text-[11px] text-slate-500 font-mono">AI-Powered Placement Readiness Evaluation</p>
                     </div>
                   </div>
                   <Link
                     href="/readiness"
                     className="btn-dibs-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5"
                   >
-                    <span>Full Diagnostic</span> <ArrowUpRight className="h-3 w-3" />
+                    <span>{user.readinessScore > 0 ? "View DRI Report" : "Take DRI Test"}</span> <ArrowUpRight className="h-3 w-3" />
                   </Link>
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  {[
-                    { dim: "Core Skill Proficiency", score: 88, color: "bg-[#00C48C]" },
-                    { dim: "Diagnostic Evaluation Accuracy", score: 82, color: "bg-[#4F46E5]" },
-                    { dim: "GitHub Project Implementation", score: 90, color: "bg-indigo-500" },
-                    { dim: "Verified Peer Endorsements", score: 78, color: "bg-amber-500" },
-                    { dim: "Academic Standing & Certifications", score: 85, color: "bg-cyan-500" },
-                  ].map((item) => (
-                    <div key={item.dim}>
-                      <div className="flex justify-between text-xs mb-1 font-mono">
-                        <span className="text-slate-700 font-medium">{item.dim}</span>
-                        <span className="font-bold text-slate-900">{item.score}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${item.color} transition-all duration-700`}
-                          style={{ width: `${item.score}%` }}
-                        />
-                      </div>
+                {user.readinessScore > 0 && Object.keys(user.readinessDimensions || {}).length > 0 ? (
+                  <div className="space-y-3 pt-2">
+                    {Object.entries(user.readinessDimensions).map(([key, score], idx) => {
+                      const colors = ["bg-[#00C48C]", "bg-[#4F46E5]", "bg-indigo-500", "bg-amber-500", "bg-cyan-500"];
+                      const label = key
+                        .replace(/_/g, " ")
+                        .replace(/\b\w/g, (ch) => ch.toUpperCase());
+                      return (
+                        <div key={key}>
+                          <div className="flex justify-between text-xs mb-1 font-mono">
+                            <span className="text-slate-700 font-medium">{label}</span>
+                            <span className="font-bold text-slate-900">{score}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${colors[idx % colors.length]} transition-all duration-700`}
+                              style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold text-amber-900">Diagnostic Pending — 0 / 100</p>
+                      <p className="text-[11px] text-amber-800/90 mt-0.5 font-mono">
+                        Complete the AI Readiness Diagnostic to generate your real DRI score and dimension breakdown.
+                      </p>
                     </div>
-                  ))}
-                </div>
+                    <Link href="/readiness" className="btn-dibs-primary py-2 px-3.5 text-xs shrink-0 text-center">
+                      Start AI DRI Test
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Featured Projects Highlight */}
@@ -635,7 +701,22 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-4">
-                  {user.projects.slice(0, 2).map((proj) => (
+                  {user.projects.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
+                      <p className="text-xs font-semibold text-slate-700">No projects added yet.</p>
+                      <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                        Showcase your GitHub repositories and deployed demos to boost your DRI score.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("projects"); setShowAddProject(true); }}
+                        className="mt-3 btn-dibs-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add First Project
+                      </button>
+                    </div>
+                  ) : (
+                    user.projects.slice(0, 2).map((proj) => (
                     <div
                       key={proj.id}
                       className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60 hover:border-slate-300 transition-all shadow-2xs"
@@ -684,7 +765,8 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -714,7 +796,14 @@ export default function ProfilePage() {
 
                 {/* Skill List */}
                 <div className="space-y-3.5">
-                  {filteredSkills.map((s) => (
+                  {filteredSkills.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center text-xs text-slate-500 font-mono">
+                      {user.skills.length === 0
+                        ? "No skills added yet. Use the form below to add your technical skills."
+                        : "No skills match your filter."}
+                    </div>
+                  ) : (
+                    filteredSkills.map((s) => (
                     <div
                       key={s.name}
                       className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -753,7 +842,8 @@ export default function ProfilePage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 {/* Add Skill Form */}
@@ -890,7 +980,16 @@ export default function ProfilePage() {
 
               {/* Projects Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {user.projects.map((proj) => (
+                {user.projects.length === 0 ? (
+                  <div className="sm:col-span-2 sense-card p-8 border border-dashed border-slate-200 bg-white/95 text-center">
+                    <FolderGit2 className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-slate-800">No projects published yet</p>
+                    <p className="text-xs text-slate-500 mt-1 font-mono">
+                      Click &ldquo;Add Project&rdquo; above to showcase your repositories and live builds.
+                    </p>
+                  </div>
+                ) : (
+                  user.projects.map((proj) => (
                   <div
                     key={proj.id}
                     className="sense-card p-5 border border-slate-200/80 bg-white/95 flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all"
@@ -942,7 +1041,8 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -956,46 +1056,50 @@ export default function ProfilePage() {
                     <GraduationCap className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">HIET Institutional Credential Registry</h3>
+                    <h3 className="text-base font-bold text-slate-900">Campus Credential Registry</h3>
                     <p className="text-xs text-slate-500 font-mono">
-                      Hi-Tech Institute of Engineering & Technology · Dr. A.P.J. Abdul Kalam Technical University
+                      {user.campus}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60">
-                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Degree Program</div>
+                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Education &amp; Program</div>
                     <div className="text-sm font-bold text-slate-900 mt-1">
-                      Bachelor of Technology (B.Tech)
+                      {user.education || "Not added yet (click Edit Profile)"}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">Computer Science & Engineering</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{user.department || "Department not set"}</div>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60">
-                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Academic Standing</div>
+                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Graduation &amp; Role Focus</div>
                     <div className="text-sm font-bold text-[#00A878] mt-1">
-                      CGPA: 8.85 / 10.0 (First Class with Distinction)
+                      Class of {user.graduationYear || "2026"}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">Graduation Class of 2026</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      Target: {user.targetRole || "Not specified"}
+                    </div>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60">
-                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Campus Domain & ID</div>
-                    <div className="text-sm font-bold text-slate-900 mt-1 font-mono">
+                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Campus Email</div>
+                    <div className="text-sm font-bold text-slate-900 mt-1 font-mono break-all">
                       {user.email}
                     </div>
                     <div className="text-xs text-emerald-600 mt-0.5 flex items-center gap-1 font-mono font-medium">
-                      <ShieldCheck className="h-3 w-3" /> Verified Institutional Domain (hiet.co.in)
+                      <ShieldCheck className="h-3 w-3" /> {user.verifiedCampusBadge ? "Verified Institutional Account" : "Standard Student Account"}
                     </div>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60">
-                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">Accreditation Audit Status</div>
+                    <div className="text-[11px] text-slate-500 font-mono uppercase font-semibold">DRI Readiness Status</div>
                     <div className="text-sm font-bold text-[#4F46E5] mt-1">
-                      NAAC Criterion 5.2 / NBA Compliant
+                      {user.readinessScore > 0 ? `${user.readinessScore}% · ${user.readinessTier}` : "Diagnostic Pending (0%)"}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">Verified for TPO Campus Drives</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      {user.readinessScore > 0 ? "AI Diagnostic Verified" : "Complete AI DRI test on Readiness tab"}
+                    </div>
                   </div>
                 </div>
 
@@ -1003,7 +1107,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="h-5 w-5 text-[#00A878]" />
                     <div className="text-xs text-slate-700 font-mono">
-                      Student profile is officially listed in the <strong>TPO Intelligence Hub</strong> for verified recruiters.
+                      Campus placement coordination is managed with your institution&apos;s TPO cell.
                     </div>
                   </div>
                   <Link href="/tpo" className="btn-dibs-mint py-1.5 px-3 text-xs shrink-0">
@@ -1018,60 +1122,52 @@ export default function ProfilePage() {
           {activeTab === "certifications" && (
             <div className="space-y-6 animate-fade-in">
               <div className="sense-card p-6 border border-slate-200/80 bg-white/95 shadow-xs">
-                <div className="flex items-center gap-2 mb-4">
-                  <Award className="h-5 w-5 text-[#4F46E5]" />
-                  <h3 className="text-base font-bold text-slate-900">Accredited Certifications & Micro-Credentials</h3>
+                <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-[#4F46E5]" />
+                    <h3 className="text-base font-bold text-slate-900">Certifications &amp; Micro-Credentials</h3>
+                  </div>
+                  <Link href="/readiness?tab=certs" className="btn-dibs-secondary py-1.5 px-3 text-xs">
+                    Browse Catalog
+                  </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    {
-                      name: "AWS Certified Cloud Practitioner",
-                      issuer: "Amazon Web Services",
-                      date: "Issued Nov 2025",
-                      badge: "AWS-CP-98124",
-                      color: "text-orange-500",
-                    },
-                    {
-                      name: "Meta Frontend Developer Professional Certificate",
-                      issuer: "Meta / Coursera",
-                      date: "Issued Aug 2025",
-                      badge: "META-FE-55412",
-                      color: "text-blue-500",
-                    },
-                    {
-                      name: "FastAPI Microservices Architecture Certification",
-                      issuer: "V-Link AI Academy",
-                      date: "Issued Jan 2026",
-                      badge: "VL-FAST-1082",
-                      color: "text-[#00A878]",
-                    },
-                    {
-                      name: "Data Structures & Algorithms Mastery",
-                      issuer: "HIET Code Innovation Hub",
-                      date: "Issued Oct 2025",
-                      badge: "HIET-DSA-093",
-                      color: "text-purple-500",
-                    },
-                  ].map((cert) => (
-                    <div
-                      key={cert.badge}
-                      className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60 space-y-2 hover:border-slate-300 transition-all shadow-2xs"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900">{cert.name}</h4>
-                          <p className="text-[11px] text-slate-500 font-mono">{cert.issuer}</p>
+                {certProgress.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
+                    <Award className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-slate-800">No certifications tracked yet</p>
+                    <p className="text-xs text-slate-500 mt-1 font-mono">
+                      Start or complete accredited tracks in the Readiness Hub to display verified certificates here.
+                    </p>
+                    <Link href="/readiness?tab=certs" className="mt-4 inline-flex btn-dibs-primary py-2 px-4 text-xs">
+                      Explore Certifications
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {certProgress.map((cp) => {
+                      const cert = certCatalog.find((c) => c.id === cp.certId);
+                      return (
+                        <div
+                          key={cp.certId}
+                          className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60 space-y-2 hover:border-slate-300 transition-all shadow-2xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-900">{cert?.title || cp.certId}</h4>
+                              <p className="text-[11px] text-slate-500 font-mono">{cert?.provider || "Verified Provider"}</p>
+                            </div>
+                            <Award className={`h-4 w-4 shrink-0 ${cp.completed ? "text-[#00A878]" : "text-[#4F46E5]"}`} />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono pt-2 border-t border-slate-200/60">
+                            <span>{cp.completed ? "Completed" : `Progress: ${cp.progress}%`}</span>
+                            <span className="text-slate-600 font-semibold">{cp.completed ? "✓ Verified" : "In Progress"}</span>
+                          </div>
                         </div>
-                        <Award className={`h-4 w-4 shrink-0 ${cert.color}`} />
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-2 border-t border-slate-200/60">
-                        <span>{cert.date}</span>
-                        <span className="text-slate-600 font-semibold">ID: {cert.badge}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1096,22 +1192,22 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2.5 text-xs font-mono">
-              <div className="flex items-center gap-2 text-slate-700">
-                <CheckCircle2 className="h-4 w-4 text-[#00A878] shrink-0" />
-                <span>Verified Campus Email (@hiet.co.in)</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <CheckCircle2 className="h-4 w-4 text-[#00A878] shrink-0" />
-                <span>Add 3+ Public GitHub Projects</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <CheckCircle2 className="h-4 w-4 text-[#00A878] shrink-0" />
-                <span>Define Target Career Role</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-500">
-                <Clock className="h-4 w-4 text-[#4F46E5] shrink-0" />
-                <span>Verify 5th Technical Skill with AI</span>
-              </div>
+              {[
+                { label: "Headline & Career Bio", done: Boolean(user.headline?.trim() && user.bio?.trim().length > 25) },
+                { label: "Academic Details Added", done: Boolean(user.education?.trim()) },
+                { label: "3+ Technical Skills", done: user.skills.length >= 3 },
+                { label: "1+ Portfolio Project", done: user.projects.length >= 1 },
+                { label: "AI DRI Diagnostic Taken", done: user.readinessScore > 0 },
+              ].map((item) => (
+                <div key={item.label} className={`flex items-center gap-2 ${item.done ? "text-slate-700" : "text-slate-500"}`}>
+                  {item.done ? (
+                    <CheckCircle2 className="h-4 w-4 text-[#00A878] shrink-0" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-slate-400 shrink-0" />
+                  )}
+                  <span>{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -1125,20 +1221,30 @@ export default function ProfilePage() {
               <div>
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">Sense AI Assistant</h4>
                 <div className="text-[10px] text-emerald-600 font-mono flex items-center gap-1 font-semibold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" /> Live Copilot
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" /> Gemini 3 Active
                 </div>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 font-mono leading-relaxed">
-              Based on your target role of <strong>{user.targetRole || "Full-Stack Software Engineer"}</strong>, your highest ROI action is completing the Cloud Systems diagnostic module.
+              {user.readinessScore > 0 ? (
+                <>
+                  Current DRI for <strong>{user.targetRole || "your target role"}</strong> is{" "}
+                  <strong>{user.readinessScore}%</strong>. Use AI Resume Studio &amp; Job Radar to prepare for placements.
+                </>
+              ) : (
+                <>
+                  Your DRI diagnostic has not been completed yet. Take the AI Readiness test to generate your score and personalized roadmap for{" "}
+                  <strong>{user.targetRole || "your target role"}</strong>.
+                </>
+              )}
             </p>
 
             <Link
               href="/readiness"
               className="mt-4 w-full btn-dibs-primary py-2 text-xs text-center justify-center inline-flex"
             >
-              Start Diagnostic Quiz
+              {user.readinessScore > 0 ? "View DRI Report" : "Start AI DRI Test"}
             </Link>
           </div>
 

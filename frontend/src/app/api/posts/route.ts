@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
-import { readDb, toPublicProfile, writeDb } from "@/lib/store";
+import { readDbAsync, toPublicProfile, writeDbAsync } from "@/lib/store";
 import { Post } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
-  const db = readDb();
+  const db = await readDbAsync();
   const groupId = req.nextUrl.searchParams.get("groupId");
   const q = (req.nextUrl.searchParams.get("q") || "").trim().toLowerCase();
   const scope = req.nextUrl.searchParams.get("scope");
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest) {
   };
 
   db.posts.unshift(newPost);
-  writeDb(db);
+  await writeDbAsync(db);
 
   return NextResponse.json(
     {
@@ -111,7 +114,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -146,7 +149,7 @@ export async function PATCH(req: NextRequest) {
       post.tags = body.tags.map((t) => t.trim().replace(/^#/, "")).filter(Boolean);
     }
     post.updatedAt = new Date().toISOString();
-    writeDb(db);
+    await writeDbAsync(db);
     const group = post.groupId ? db.groups.find((g) => g.id === post.groupId) : undefined;
     return NextResponse.json({
       post: {
@@ -180,7 +183,7 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  writeDb(db);
+  await writeDbAsync(db);
   return NextResponse.json({ post });
 }
 
@@ -204,7 +207,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "postId is required." }, { status: 400 });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const idx = db.posts.findIndex((p) => p.id === postId);
   if (idx === -1) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -215,6 +218,6 @@ export async function DELETE(req: NextRequest) {
   }
 
   db.posts.splice(idx, 1);
-  writeDb(db);
+  await writeDbAsync(db);
   return NextResponse.json({ deleted: true, postId });
 }

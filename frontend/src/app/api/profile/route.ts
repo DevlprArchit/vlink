@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth";
+import { getSessionUserId, PROFILE_COOKIE_NAME, signJsonToken } from "@/lib/auth";
 import { callAiService } from "@/lib/ai-client";
-import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
+import { createNotification, readDbAsync, toPublicProfile, writeDbAsync } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
-  const db = readDb();
+  const db = await readDbAsync();
   const q = (req.nextUrl.searchParams.get("q") || "").trim().toLowerCase();
   const currentUserId = await getSessionUserId();
 
@@ -92,7 +95,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -199,6 +202,15 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  writeDb(db);
-  return NextResponse.json({ user: toPublicProfile(user) });
+  await writeDbAsync(db);
+  const pub = toPublicProfile(user);
+  const res = NextResponse.json({ user: pub });
+  res.cookies.set(PROFILE_COOKIE_NAME, signJsonToken(pub), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+    secure: (process.env.NODE_ENV as string) === "production",
+  });
+  return res;
 }

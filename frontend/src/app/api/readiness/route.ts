@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth";
+import { getSessionUserId, PROFILE_COOKIE_NAME, signJsonToken } from "@/lib/auth";
 import { callAiService } from "@/lib/ai-client";
 import { generateAiReadinessAssessment } from "@/lib/llm";
-import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
+import { createNotification, readDbAsync, toPublicProfile, writeDbAsync } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const userId = await getSessionUserId();
-  const db = readDb();
+  const db = await readDbAsync();
 
   if (!userId) {
-    return NextResponse.json({
-      certifications: db.certifications,
-      certProgress: [],
-      roadmap: null,
-      latestAssessment: null,
-    });
+    return NextResponse.json(
+      {
+        certifications: db.certifications,
+        certProgress: [],
+        roadmap: null,
+        latestAssessment: null,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
 
   const roadmap = db.roadmaps.find((r) => r.userId === userId) || null;
@@ -22,12 +28,15 @@ export async function GET() {
   const assessments = db.assessments.filter((a) => a.userId === userId);
   const latestAssessment = assessments[0] || null;
 
-  return NextResponse.json({
-    certifications: db.certifications,
-    certProgress,
-    roadmap,
-    latestAssessment,
-  });
+  return NextResponse.json(
+    {
+      certifications: db.certifications,
+      certProgress,
+      roadmap,
+      latestAssessment,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -198,14 +207,22 @@ export async function POST(req: NextRequest) {
     link: "/profile",
   });
 
-  writeDb(db);
+  await writeDbAsync(db);
 
-  return NextResponse.json({
-    user: toPublicProfile(user),
+  const pubUser = toPublicProfile(user);
+  const postRes = NextResponse.json({
+    user: pubUser,
     assessment: assessmentRecord,
     roadmap: newRoadmap,
     aiSource: readinessRes.source,
   });
+  postRes.cookies.set(PROFILE_COOKIE_NAME, signJsonToken(pubUser), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return postRes;
 }
 
 export async function PATCH(req: NextRequest) {
@@ -213,7 +230,7 @@ export async function PATCH(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -234,8 +251,16 @@ export async function PATCH(req: NextRequest) {
       if (ms.completed && user.readinessScore > 0) {
         user.readinessScore = Math.min(99, user.readinessScore + 2);
       }
-      writeDb(db);
-      return NextResponse.json({ roadmap, user: toPublicProfile(user) });
+      await writeDbAsync(db);
+      const pubUser = toPublicProfile(user);
+      const res = NextResponse.json({ roadmap, user: pubUser });
+      res.cookies.set(PROFILE_COOKIE_NAME, signJsonToken(pubUser), {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+      return res;
     }
   }
 
@@ -261,11 +286,19 @@ export async function PATCH(req: NextRequest) {
     if (completed && user.readinessScore > 0) {
       user.readinessScore = Math.min(99, user.readinessScore + 3);
     }
-    writeDb(db);
-    return NextResponse.json({
+    await writeDbAsync(db);
+    const pubUser = toPublicProfile(user);
+    const res = NextResponse.json({
       certProgress: db.certProgress.filter((cp) => cp.userId === user.id),
-      user: toPublicProfile(user),
+      user: pubUser,
     });
+    res.cookies.set(PROFILE_COOKIE_NAME, signJsonToken(pubUser), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return res;
   }
 
   return NextResponse.json({ error: "Invalid readiness PATCH action" }, { status: 400 });

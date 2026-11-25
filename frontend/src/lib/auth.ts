@@ -2,11 +2,37 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE_NAME = "vlink_session";
+export const PROFILE_COOKIE_NAME = "vlink_user_snap";
 const SECRET = process.env.VLINK_AUTH_SECRET || "vlink-vision-link-hiet-2026-production-secret-auth-key-secure";
 const MAX_SESSION_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getSecret(): string {
   return SECRET;
+}
+
+export function signJsonToken<T>(data: T): string {
+  const payload = Buffer.from(JSON.stringify({ data, iat: Date.now() })).toString("base64url");
+  const sig = crypto.createHmac("sha256", getSecret()).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+export function verifyJsonToken<T>(token: string | undefined): T | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
+  const expected = Buffer.from(crypto.createHmac("sha256", getSecret()).update(payload).digest("base64url"));
+  const received = Buffer.from(sig);
+  if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8")) as { data?: T; iat?: number };
+    if (!parsed.data || !Number.isFinite(parsed.iat)) return null;
+    const age = Date.now() - Number(parsed.iat);
+    if (age < -60_000 || age > MAX_SESSION_AGE_MS) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
 }
 
 export function hashPassword(password: string): string {
@@ -59,6 +85,16 @@ export async function getSessionUserId(): Promise<string | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     return verifySessionToken(token);
+  } catch {
+    return null;
+  }
+}
+
+export async function getSessionUserBackup<T>(): Promise<T | null> {
+  try {
+    const cookieStore = await cookies();
+    const snap = cookieStore.get(PROFILE_COOKIE_NAME)?.value;
+    return verifyJsonToken<T>(snap);
   } catch {
     return null;
   }

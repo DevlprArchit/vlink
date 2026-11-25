@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
-import { readDb, writeDb } from "@/lib/store";
+import { readDbAsync, writeDbAsync } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
-  const db = readDb();
+  const db = await readDbAsync();
   const groups = db.groups.map((g) => ({
     ...g,
     postCount: db.posts.filter((p) => p.groupId === g.id).length,
   }));
-  return NextResponse.json({ groups });
+  return NextResponse.json({ groups }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(req: NextRequest) {
@@ -17,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
         user.joinedGroups.push(group.id);
       }
     }
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ group });
   }
 
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
     };
     db.groups.push(newGroup);
     user.joinedGroups.push(newGroup.id);
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ group: newGroup }, { status: 201 });
   }
 

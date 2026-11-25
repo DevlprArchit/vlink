@@ -29,44 +29,57 @@ export async function callCloudLLM(params: {
   const timeoutMs = params.timeoutMs ?? 8000;
 
   if (geminiKey) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const contents = [
-        ...(params.history || []).slice(-6).map((m) => ({
-          role: m.sender === "user" ? "user" : "model",
-          parts: [{ text: m.text }],
-        })),
-        { role: "user", parts: [{ text: params.userPrompt }] },
-      ];
+    const candidateModels = [
+      "gemini-3-flash-preview",
+      "gemini-3.8-flash",
+      "gemini-flash-latest",
+      "gemini-2.5-flash",
+    ];
+    for (const modelName of candidateModels) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const contents = [
+          ...(params.history || []).slice(-6).map((m) => ({
+            role: m.sender === "user" ? "user" : "model",
+            parts: [{ text: m.text }],
+          })),
+          { role: "user", parts: [{ text: params.userPrompt }] },
+        ];
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: params.systemPrompt }] },
-            contents,
-            generationConfig: {
-              temperature: params.expectJson ? 0.25 : 0.7,
-              maxOutputTokens: 900,
-              ...(params.expectJson ? { responseMimeType: "application/json" } : {}),
-            },
-          }),
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: params.systemPrompt }] },
+              contents,
+              generationConfig: {
+                temperature: params.expectJson ? 0.25 : 0.7,
+                maxOutputTokens: 900,
+                ...(params.expectJson ? { responseMimeType: "application/json" } : {}),
+              },
+            }),
+          }
+        );
+        clearTimeout(timer);
+        if (res.ok) {
+          const json = (await res.json()) as {
+            candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+          };
+          let text = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (text) {
+            if (params.expectJson) {
+              text = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+            }
+            return { text, provider: modelName };
+          }
         }
-      );
-      clearTimeout(timer);
-      if (res.ok) {
-        const json = (await res.json()) as {
-          candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-        };
-        const text = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return { text, provider: "gemini-2.5-flash" };
+      } catch {
+        // try next Gemini model cleanly
       }
-    } catch {
-      // fall through cleanly
     }
   }
 
@@ -862,5 +875,34 @@ Return valid JSON with keys:
     recommendations: aiReport.actionPlan,
     ai_report: aiReport,
     ai_source: aiSource,
+  };
+}
+
+// ─── 5. AI Job Specification Drafter ────────────────────────────────────────
+
+export async function generateAiJobDescription(params: {
+  title: string;
+  companyName: string;
+  roleType: string;
+  requiredSkills: string;
+  geminiApiKey?: string;
+}): Promise<{ description: string; provider: string }> {
+  const role = params.title.trim() || "Full-Stack Software Engineer";
+  const comp = params.companyName.trim() || "Partner Enterprise";
+  const skills = params.requiredSkills.trim() || "React, TypeScript, Cloud APIs";
+
+  const cloud = await callCloudLLM({
+    geminiApiKey: params.geminiApiKey,
+    systemPrompt: `You are a Senior Technical Recruiter. Write a crisp, realistic, structured corporate job description with Overview, Key Responsibilities (3 bullets), and Required Qualifications (3 bullets). Keep it clear and concise (under 180 words).`,
+    userPrompt: `Role: ${role}\nCompany: ${comp}\nEmployment Type: ${params.roleType}\nRequired Skills: ${skills}`,
+  });
+
+  if (cloud) {
+    return { description: cloud.text, provider: cloud.provider };
+  }
+
+  return {
+    description: `We are seeking a driven ${role} (${params.roleType}) to join ${comp} and build resilient, high-impact software systems.\n\nKey Responsibilities:\n• Architect and deliver scalable features across modern frontend and backend services.\n• Collaborate with product and engineering peers on code quality, API contracts, and telemetry.\n• Optimize application latency, automated tests, and CI/CD deployment workflows.\n\nRequired Qualifications:\n• Hands-on fluency with ${skills}.\n• Solid grounding in data structures, RESTful/GraphQL systems, and cloud fundamentals.\n• Demonstrated project execution and verified problem-solving skills.`,
+    provider: "vlink-recruiter-ai",
   };
 }

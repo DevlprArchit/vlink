@@ -465,7 +465,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </button>
 
                   {notifOpen && (
-                    <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-88 rounded-2xl border border-white/90 bg-white/95 shadow-2xl backdrop-blur-2xl p-2">
+                    <div className="fixed left-3 right-3 top-20 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 z-50 sm:w-96 rounded-2xl border border-white/95 bg-white/95 shadow-2xl backdrop-blur-2xl p-2">
                       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">Alert Feed</span>
                         <div className="flex items-center gap-2">
@@ -656,7 +656,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div>
                   <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">V-Link AI Mentor</h4>
                   <p className="text-[10px] text-slate-500 font-medium">
-                    {geminiKey.trim() ? "✦ Gemini Cloud LLM Connected" : "✦ Conversational AI & Knowledge Engine"}
+                    {geminiKey.trim() ? "✦ Custom Gemini Key Connected" : "✦ Gemini 3 AI Active"}
                   </p>
                 </div>
               </div>

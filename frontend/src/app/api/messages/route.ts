@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
-import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
+import { createNotification, readDbAsync, toPublicProfile, writeDbAsync } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) {
-    return NextResponse.json({ conversations: [] });
+    return NextResponse.json({ conversations: [] }, { headers: { "Cache-Control": "no-store" } });
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const conversations = db.conversations
     .filter((c) => c.participantIds.includes(userId))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -19,7 +22,7 @@ export async function GET() {
         .map(toPublicProfile),
     }));
 
-  return NextResponse.json({ conversations });
+  return NextResponse.json({ conversations }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(req: NextRequest) {
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const sender = db.users.find((u) => u.id === userId);
   if (!sender) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -82,7 +85,7 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
     db.conversations.unshift(conv);
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ conversation: conv }, { status: 201 });
   }
 
@@ -115,7 +118,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    writeDb(db);
+    await writeDbAsync(db);
     return NextResponse.json({ message: msg, conversation: conv });
   }
 

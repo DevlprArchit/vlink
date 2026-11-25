@@ -1,26 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getSessionUserBackup,
   getSessionUserId,
   hashPassword,
   isValidCampusEmail,
+  PROFILE_COOKIE_NAME,
   SESSION_COOKIE_NAME,
+  signJsonToken,
   signSessionToken,
   verifyPassword,
 } from "@/lib/auth";
-import { createNotification, readDb, toPublicProfile, writeDb } from "@/lib/store";
-import { UserProfile } from "@/lib/types";
+import { createNotification, readDbAsync, toPublicProfile, writeDbAsync } from "@/lib/store";
+import { PublicProfile, UserProfile } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function attachSessionCookies(res: NextResponse, user: PublicProfile) {
+  const token = signSessionToken(user.id);
+  const snap = signJsonToken(user);
+  const opts = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+    secure: (process.env.NODE_ENV as string) === "production",
+  };
+  res.cookies.set(SESSION_COOKIE_NAME, token, opts);
+  res.cookies.set(PROFILE_COOKIE_NAME, snap, opts);
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+}
 
 export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) {
-    return NextResponse.json({ user: null });
+    return NextResponse.json(
+      { user: null },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+    );
   }
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find((u) => u.id === userId);
   if (!user) {
-    return NextResponse.json({ user: null });
+    // Restore stateless session backup if container cold-started before sync
+    const snap = await getSessionUserBackup<PublicProfile>();
+    if (snap && snap.id === userId) {
+      return NextResponse.json(
+        { user: snap },
+        { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+      );
+    }
+    return NextResponse.json(
+      { user: null },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+    );
   }
-  return NextResponse.json({ user: toPublicProfile(user) });
+  return NextResponse.json(
+    { user: toPublicProfile(user) },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -39,22 +77,18 @@ export async function POST(req: NextRequest) {
   if (body.action === "logout") {
     const res = NextResponse.json({ ok: true });
     res.cookies.delete(SESSION_COOKIE_NAME);
+    res.cookies.delete(PROFILE_COOKIE_NAME);
+    res.headers.set("Cache-Control", "no-store");
     return res;
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
 
   if (body.action === "demo") {
     const target = db.users.find((u) => u.id === (body.demoUserId || "user-archit")) || db.users[0];
-    const token = signSessionToken(target.id);
-    const res = NextResponse.json({ user: toPublicProfile(target) });
-    res.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-      secure: (process.env.NODE_ENV as string) === "production",
-    });
+    const pub = toPublicProfile(target);
+    const res = NextResponse.json({ user: pub });
+    attachSessionCookies(res, pub);
     return res;
   }
 
@@ -76,15 +110,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
-    const token = signSessionToken(user.id);
-    const res = NextResponse.json({ user: toPublicProfile(user) });
-    res.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-      secure: (process.env.NODE_ENV as string) === "production",
-    });
+    const pub = toPublicProfile(user);
+    const res = NextResponse.json({ user: pub });
+    attachSessionCookies(res, pub);
     return res;
   }
 
@@ -92,31 +120,28 @@ export async function POST(req: NextRequest) {
     const name = (body.name || "").trim();
     const email = (body.email || "").trim().toLowerCase();
     const password = body.password || "";
-    const campus = (body.campus || "HIET Shahpur (HPTU)").trim();
-    const department = (body.department || "Computer Science & Engineering").trim();
-    const graduationYear = (body.graduationYear || "2027").trim();
-    const targetRole = (body.targetRole || "Full-Stack Software Engineer").trim();
+    const campus = (body.campus || "").trim();
+    const department = (body.department || "").trim();
+    const graduationYear = (body.graduationYear || "").trim();
+    const targetRole = (body.targetRole || "").trim();
 
     if (!name || !email || password.length < 6) {
       return NextResponse.json(
-        { error: "Provide full name, valid campus email, and a password of at least 6 characters." },
+        { error: "Provide full name, valid email, and a password of at least 6 characters." },
         { status: 400 }
       );
     }
 
     if (!isValidCampusEmail(email)) {
       return NextResponse.json(
-        {
-          error:
-            "Please register using a valid campus email (e.g., name@hiet.co.in, name@hptu.ac.in, or *.edu / *.ac.in).",
-        },
+        { error: "Please register using a valid email address." },
         { status: 400 }
       );
     }
 
     if (db.users.some((u) => u.email.toLowerCase() === email)) {
       return NextResponse.json(
-        { error: "An account with this campus email already exists." },
+        { error: "An account with this email already exists." },
         { status: 409 }
       );
     }
@@ -126,21 +151,18 @@ export async function POST(req: NextRequest) {
       name,
       email,
       passwordHash: hashPassword(password),
-      campus,
-      department,
-      graduationYear,
-      headline: `${department} Student · Targeting ${targetRole}`,
-      bio: `Student at ${campus} building projects and preparing for ${targetRole} roles on V-Link.`,
-      targetRole,
+      campus: campus || "Campus Member",
+      department: department || "Engineering",
+      graduationYear: graduationYear || "2027",
+      headline: "",
+      bio: "",
+      targetRole: targetRole || "",
       verifiedCampusBadge: false,
-      avatarColor: "#244af5",
-      education: `B.Tech in ${department}, ${campus} · Class of ${graduationYear}`,
-      skills: [
-        { name: "Python", level: 65, verified: false, endorsements: 0 },
-        { name: "Git", level: 65, verified: false, endorsements: 0 },
-      ],
+      avatarColor: "#4F46E5",
+      education: "",
+      skills: [],
       projects: [],
-      interests: [targetRole, "Campus Builders", "Career Readiness"],
+      interests: [],
       readinessScore: 0,
       readinessTier: "Diagnostic Pending",
       readinessDimensions: {
@@ -151,41 +173,27 @@ export async function POST(req: NextRequest) {
         "Verification": 0,
         "Coverage": 0,
       },
-      connections: ["user-archit"],
-      following: ["user-archit"],
+      connections: [],
+      following: [],
       followedCompanies: [],
-      joinedGroups: ["grp-hiet-cse"],
+      joinedGroups: [],
     };
 
     db.users.push(newUser);
-    const archit = db.users.find((u) => u.id === "user-archit");
-    if (archit && !archit.connections.includes(newUser.id)) {
-      archit.connections.push(newUser.id);
-    }
-    const hietGroup = db.groups.find((g) => g.id === "grp-hiet-cse");
-    if (hietGroup && !hietGroup.memberIds.includes(newUser.id)) {
-      hietGroup.memberIds.push(newUser.id);
-    }
 
     createNotification(db, {
       userId: newUser.id,
       category: "connection",
       title: "Welcome to V-Link! Complete Your AI DRI Test",
-      body: "Your profile starts at Diagnostic Pending. Take the AI Readiness Diagnostic to generate your verified DRI Score and Career Report.",
+      body: "Your profile starts fresh at 0 connections & Diagnostic Pending. Add your skills/projects and take the AI DRI Test.",
       link: "/readiness",
     });
 
-    writeDb(db);
+    await writeDbAsync(db);
 
-    const token = signSessionToken(newUser.id);
-    const res = NextResponse.json({ user: toPublicProfile(newUser) }, { status: 201 });
-    res.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-      secure: (process.env.NODE_ENV as string) === "production",
-    });
+    const pub = toPublicProfile(newUser);
+    const res = NextResponse.json({ user: pub }, { status: 201 });
+    attachSessionCookies(res, pub);
     return res;
   }
 

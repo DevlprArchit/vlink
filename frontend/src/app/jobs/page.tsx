@@ -140,18 +140,32 @@ function JobsPageContent() {
     try {
       const role = newTitle.trim() || "Full-Stack Software Engineer";
       const comp = newCompany.trim() || "Innovative Tech Labs";
-      setNewDesc(`We are looking for a high-performing ${role} at ${comp} to architect scalable cloud systems, build delightful user experiences, and drive production feature releases.
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const savedKey = typeof window !== "undefined" ? localStorage.getItem("vlink_gemini_key") || "" : "";
+      if (savedKey.trim()) headers["x-gemini-api-key"] = savedKey.trim();
 
-Key Responsibilities:
-• Design and maintain robust, high-availability web applications and microservices.
-• Collaborate with cross-functional teams to translate user requirements into technical designs.
-• Optimize application performance, reliability, and automated test coverage.
-
-Required Qualifications:
-• Proficiency with ${newSkills || "modern software engineering stacks"}.
-• Strong understanding of system design, database indexing, and REST/GraphQL APIs.
-• Excellent problem-solving skills and demonstrably verified V-Link career readiness.`);
-      setFeedback("✦ AI Job Description drafted! Customize any field and click Publish.");
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          task: "job-spec-draft",
+          payload: {
+            title: role,
+            companyName: comp,
+            roleType: newRoleType,
+            requiredSkills: newSkills.split(",").map((s) => s.trim()).filter(Boolean),
+          },
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.description) {
+        setNewDesc(json.data.description);
+        setFeedback(`✦ ${json.provider === "gemini" ? "Gemini AI" : "AI"} Job Description drafted! Customize any field and click Publish.`);
+      } else {
+        setFeedback("Could not draft description. Please write manually.");
+      }
+    } catch {
+      setFeedback("Network error drafting job description.");
     } finally {
       setAiDrafting(false);
     }

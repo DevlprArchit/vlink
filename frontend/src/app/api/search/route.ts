@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readDb, toPublicProfile } from "@/lib/store";
+import { readDbAsync, toPublicProfile } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") || "").trim().toLowerCase();
-  const db = readDb();
+  const db = await readDbAsync();
 
   if (!q) {
     return NextResponse.json({ people: [], posts: [], companies: [], jobs: [] });
