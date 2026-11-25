@@ -12,11 +12,15 @@ import {
   ChevronRight,
   Circle,
   ExternalLink,
+  FileCheck2,
+  Mic,
+  MicOff,
   RefreshCw,
   ShieldCheck,
   Sparkles,
   Target,
   Trophy,
+  Upload,
   Zap,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -307,6 +311,11 @@ function ReadinessSuiteContent() {
   const [interviewQs, setInterviewQs] = useState<InterviewQuestion[]>([]);
   const [activeQIdx, setActiveQIdx] = useState(0);
   const [interviewAnswer, setInterviewAnswer] = useState("");
+  const [startingInterview, setStartingInterview] = useState(false);
+  const [evaluatingInterview, setEvaluatingInterview] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
   const [interviewFeedback, setInterviewFeedback] = useState<{
     score: number;
     clarity_score: number;
@@ -316,6 +325,15 @@ function ReadinessSuiteContent() {
     feedback: string;
     sample_strong_answer: string;
   } | null>(null);
+
+  // Certificate upload & verification state
+  const [uploadCertTarget, setUploadCertTarget] = useState<string>("custom");
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadProvider, setUploadProvider] = useState("");
+  const [uploadUrl, setUploadUrl] = useState("");
+  const [uploadFileName, setUploadFileName] = useState("");
+  const [uploadingCert, setUploadingCert] = useState(false);
+  const [certBanner, setCertBanner] = useState("");
 
   // Skill Verification Quiz state
   const [verifySkillName, setVerifySkillName] = useState("Python");
@@ -377,13 +395,21 @@ function ReadinessSuiteContent() {
       setAuthModalOpen(true);
       return;
     }
+    const unansweredIdx = DIAGNOSTIC_QUESTIONS.findIndex((q) => answers[q.id] === undefined);
+    if (unansweredIdx !== -1) {
+      setCurrentQ(unansweredIdx);
+      setDiagBanner(
+        `Please answer all ${DIAGNOSTIC_QUESTIONS.length} questions before generating your DRI score (Question ${unansweredIdx + 1} is unanswered).`
+      );
+      return;
+    }
     setSubmittingDiag(true);
     setDiagBanner("");
     try {
       const diagnosticAnswers = DIAGNOSTIC_QUESTIONS.map((q) => ({
         question_id: q.id,
         skill: q.skill,
-        selected_option: answers[q.id] ?? 0,
+        selected_option: answers[q.id],
         correct_option: q.correct,
         confidence: 4,
       }));
@@ -486,50 +512,156 @@ function ReadinessSuiteContent() {
     }
   }
 
+  async function handleUploadCert(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    const matchedCatalog = certifications.find((c) => c.id === uploadCertTarget);
+    const finalTitle = matchedCatalog ? matchedCatalog.title : uploadTitle.trim();
+    const finalProvider = matchedCatalog ? matchedCatalog.provider : uploadProvider.trim();
+    if (!finalTitle) {
+      setCertBanner("Please enter a certificate name or select a course.");
+      return;
+    }
+    if (!uploadFileName && !uploadUrl.trim()) {
+      setCertBanner("Please upload a certificate file (PDF/Image) or provide a credential verification URL.");
+      return;
+    }
+    setUploadingCert(true);
+    setCertBanner("");
+    try {
+      const res = await fetch("/api/readiness", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "upload_cert",
+          certId: matchedCatalog ? matchedCatalog.id : `custom-${Date.now()}`,
+          customTitle: finalTitle,
+          customProvider: finalProvider || "External / Verified Issuer",
+          credentialUrl: uploadUrl.trim() || undefined,
+          certificateFileName: uploadFileName || undefined,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          certProgress: UserCertificationProgress[];
+          user: PublicProfile;
+        };
+        setCertProgress(data.certProgress);
+        setUser(data.user);
+        setUploadTitle("");
+        setUploadProvider("");
+        setUploadUrl("");
+        setUploadFileName("");
+        setCertBanner(`✓ "${finalTitle}" uploaded & verified on your profile!`);
+        await refreshNotifications();
+      }
+    } finally {
+      setUploadingCert(false);
+    }
+  }
+
+  function toggleMic() {
+    if (typeof window === "undefined") return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) {
+      setDiagBanner("Voice mic is not supported in this browser. Please use Chrome/Edge or type your answer.");
+      return;
+    }
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInterviewAnswer(transcript);
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }
+
   async function startMockInterview() {
     if (!user) {
       setAuthModalOpen(true);
       return;
     }
+    setStartingInterview(true);
     setInterviewFeedback(null);
     setInterviewAnswer("");
-    const focus = jobFocusSkills?.length
-      ? jobFocusSkills
-      : user.skills.slice(0, 4).map((s) => s.name);
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: getAiHeaders(),
-      body: JSON.stringify({
-        task: "mock-interview-start",
-        payload: { targetRole, focusSkills: focus },
-      }),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as { data: { questions: InterviewQuestion[] } };
-      setInterviewQs(data.data.questions);
-      setActiveQIdx(0);
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+    try {
+      const focus = jobFocusSkills?.length
+        ? jobFocusSkills
+        : user.skills.slice(0, 4).map((s) => s.name);
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: getAiHeaders(),
+        body: JSON.stringify({
+          task: "mock-interview-start",
+          payload: { targetRole, focusSkills: focus },
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { data: { questions: InterviewQuestion[] } };
+        setInterviewQs(data.data.questions);
+        setActiveQIdx(0);
+      }
+    } finally {
+      setStartingInterview(false);
     }
   }
 
   async function evaluateInterviewAnswer() {
     const q = interviewQs[activeQIdx];
     if (!q || !interviewAnswer.trim()) return;
-    const res = await fetch("/api/ai", {
-      method: "POST",
-      headers: getAiHeaders(),
-      body: JSON.stringify({
-        task: "mock-interview-evaluate",
-        payload: {
-          targetRole,
-          question: q.question,
-          expectedConcepts: q.expected_concepts,
-          answer: interviewAnswer,
-        },
-      }),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as { data: typeof interviewFeedback };
-      setInterviewFeedback(data.data);
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+    setEvaluatingInterview(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: getAiHeaders(),
+        body: JSON.stringify({
+          task: "mock-interview-evaluate",
+          payload: {
+            targetRole,
+            question: q.question,
+            expectedConcepts: q.expected_concepts,
+            answer: interviewAnswer,
+          },
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { data: typeof interviewFeedback };
+        setInterviewFeedback(data.data);
+      }
+    } finally {
+      setEvaluatingInterview(false);
     }
   }
 
@@ -941,6 +1073,9 @@ function ReadinessSuiteContent() {
               >
                 ← Prev
               </button>
+              <span className="text-[11px] font-mono text-slate-500">
+                {Object.keys(answers).length}/{DIAGNOSTIC_QUESTIONS.length} answered
+              </span>
               {currentQ < DIAGNOSTIC_QUESTIONS.length - 1 ? (
                 <button
                   type="button"
@@ -952,8 +1087,8 @@ function ReadinessSuiteContent() {
               ) : (
                 <button
                   type="submit"
-                  disabled={submittingDiag}
-                  className="flex items-center gap-2 rounded-xl btn-dibs-primary px-5 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-60"
+                  disabled={submittingDiag || Object.keys(answers).length < DIAGNOSTIC_QUESTIONS.length}
+                  className="flex items-center gap-2 rounded-xl btn-dibs-primary px-5 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50"
                 >
                   <Target className="h-4 w-4" />
                   {submittingDiag ? "Scoring..." : "Submit & Get Score"}
@@ -961,16 +1096,18 @@ function ReadinessSuiteContent() {
               )}
             </div>
 
-            {/* Full submit at bottom too */}
+            {/* Full submit at bottom only unlocked when all 5 answered */}
             <button
               type="submit"
-              disabled={submittingDiag}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+              disabled={submittingDiag || Object.keys(answers).length < DIAGNOSTIC_QUESTIONS.length}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white shadow-sm hover:bg-slate-800 disabled:opacity-40"
             >
               <BarChart2 className="h-4 w-4" />
               {submittingDiag
                 ? "Scoring via AI Service..."
-                : "Complete Skill Diagnostic & Update Readiness Score"}
+                : Object.keys(answers).length < DIAGNOSTIC_QUESTIONS.length
+                ? `Answer all ${DIAGNOSTIC_QUESTIONS.length} questions to generate DRI Score (${Object.keys(answers).length}/${DIAGNOSTIC_QUESTIONS.length})`
+                : "Complete Skill Diagnostic & Generate AI DRI Score"}
             </button>
           </form>
         </div>
@@ -1123,6 +1260,162 @@ function ReadinessSuiteContent() {
       {/* ══════════ CERTIFICATIONS TAB ══════════ */}
       {tab === "certs" && (
         <div className="space-y-5">
+          {/* Upload & Verify Certificate Section */}
+          <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/40 p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-indigo-600" />
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Upload &amp; Verify Certificate Proof</h2>
+                  <p className="text-[11px] text-slate-600">
+                    Upload your certificate file (PDF/PNG/JPG) or credential verification URL to verify your skill on V-Link.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {certBanner && (
+              <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800">
+                {certBanner}
+              </div>
+            )}
+
+            <form onSubmit={handleUploadCert} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
+                  Certificate Course
+                </label>
+                <select
+                  value={uploadCertTarget}
+                  onChange={(e) => setUploadCertTarget(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-indigo-400"
+                >
+                  <option value="custom">+ Custom / External Certificate</option>
+                  {certifications.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title} ({c.provider})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {uploadCertTarget === "custom" ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold text-slate-700">
+                      Certificate Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={uploadTitle}
+                      onChange={(e) => setUploadTitle(e.target.value)}
+                      placeholder="e.g. AWS Certified Cloud Practitioner"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold text-slate-700">
+                      Issuing Organization
+                    </label>
+                    <input
+                      type="text"
+                      value={uploadProvider}
+                      onChange={(e) => setUploadProvider(e.target.value)}
+                      placeholder="e.g. AWS, Coursera, Google, NPTEL"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-400"
+                    />
+                  </div>
+                </>
+              ) : null}
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
+                  Credential Verification URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={uploadUrl}
+                  onChange={(e) => setUploadUrl(e.target.value)}
+                  placeholder="https://coursera.org/verify/..."
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
+                  Certificate File (PDF, PNG, JPG)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  onChange={(e) => setUploadFileName(e.target.files?.[0]?.name || "")}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-indigo-700"
+                />
+                {uploadFileName && (
+                  <p className="mt-1 text-[11px] font-medium text-emerald-700">
+                    Selected: {uploadFileName}
+                  </p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={uploadingCert}
+                  className="flex items-center gap-2 rounded-xl btn-dibs-primary px-5 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-60"
+                >
+                  <FileCheck2 className="h-4 w-4" />
+                  {uploadingCert ? "Verifying..." : "Submit & Verify Certificate"}
+                </button>
+              </div>
+            </form>
+
+            {/* Uploaded / Verified Certificates List */}
+            {certProgress.filter((cp) => cp.certificateFileName || cp.credentialUrl || cp.customTitle).length > 0 && (
+              <div className="mt-4 border-t border-indigo-200/60 pt-3">
+                <h3 className="text-xs font-bold text-slate-800 mb-2">Your Verified Certificate Proofs</h3>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {certProgress
+                    .filter((cp) => cp.certificateFileName || cp.credentialUrl || cp.customTitle)
+                    .map((cp) => {
+                      const catCert = certifications.find((c) => c.id === cp.certId);
+                      return (
+                        <div
+                          key={cp.certId}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate">
+                              {cp.customTitle || catCert?.title || cp.certId}
+                            </div>
+                            <div className="text-[11px] text-slate-500 truncate">
+                              {cp.customProvider || catCert?.provider || "Verified Issuer"}
+                              {cp.certificateFileName ? ` · 📄 ${cp.certificateFileName}` : ""}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {cp.credentialUrl && (
+                              <a
+                                href={cp.credentialUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                              >
+                                Verify Link
+                              </a>
+                            )}
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                              ✓ Verified
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Category filter */}
           <div className="flex flex-wrap gap-1.5 rounded-xl glass-panel p-2 shadow-sm border border-slate-200/80">
             {CERT_CATEGORIES.map((cat) => (
@@ -1292,9 +1585,10 @@ function ReadinessSuiteContent() {
                   <button
                     type="button"
                     onClick={() => void startMockInterview()}
-                    className="rounded-xl btn-dibs-primary px-3.5 py-2 text-xs font-semibold text-white"
+                    disabled={startingInterview}
+                    className="rounded-xl btn-dibs-primary px-3.5 py-2 text-xs font-semibold text-white disabled:opacity-60"
                   >
-                    Start Session
+                    {startingInterview ? "Starting..." : interviewQs.length > 0 ? "Restart Session" : "Start Session"}
                   </button>
                 </div>
               </div>
@@ -1313,7 +1607,7 @@ function ReadinessSuiteContent() {
                             i < activeQIdx
                               ? "bg-emerald-500 text-slate-900"
                               : i === activeQIdx
-                              ? "bg-indigo-600 text-slate-900"
+                              ? "bg-indigo-600 text-white"
                               : "bg-slate-100 border border-slate-200/60 text-slate-500 font-mono"
                           }`}
                         >
@@ -1335,24 +1629,59 @@ function ReadinessSuiteContent() {
                     <span className="rounded-md bg-slate-100 border border-slate-200/60 px-2 py-0.5">
                       {interviewQs[activeQIdx].category}
                     </span>
+                    <button
+                      type="button"
+                      onClick={toggleMic}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition ${
+                        isListening
+                          ? "bg-red-100 text-red-700 border border-red-300 animate-pulse"
+                          : "bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100"
+                      }`}
+                    >
+                      {isListening ? (
+                        <>
+                          <MicOff className="h-3.5 w-3.5" /> Stop Mic
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="h-3.5 w-3.5" /> Answer with Mic
+                        </>
+                      )}
+                    </button>
                   </div>
                   <div className="rounded-xl bg-slate-50/80 border border-slate-200/60 p-3.5 text-sm font-semibold text-slate-900 font-bold">
                     {interviewQs[activeQIdx].question}
                   </div>
-                  <textarea
-                    rows={4}
-                    value={interviewAnswer}
-                    onChange={(e) => setInterviewAnswer(e.target.value)}
-                    placeholder="Type your architectural and technical response..."
-                    className="w-full rounded-xl border border-slate-200/80 p-3 text-xs outline-none focus:border-indigo-400"
-                  />
-                  <div className="flex gap-2">
+                  <div className="relative">
+                    <textarea
+                      rows={4}
+                      value={interviewAnswer}
+                      onChange={(e) => setInterviewAnswer(e.target.value)}
+                      placeholder={isListening ? "Listening... speak your answer clearly." : "Type or click the Mic button to speak your technical response..."}
+                      className="w-full rounded-xl border border-slate-200/80 p-3 pr-12 text-xs outline-none focus:border-indigo-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleMic}
+                      title={isListening ? "Stop voice recording" : "Speak answer using microphone"}
+                      aria-label={isListening ? "Stop voice recording" : "Speak answer using microphone"}
+                      className={`absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
+                        isListening
+                          ? "bg-red-600 text-white animate-pulse"
+                          : "bg-indigo-600 text-white hover:bg-indigo-700"
+                      }`}
+                    >
+                      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => void evaluateInterviewAnswer()}
-                      className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-900"
+                      disabled={evaluatingInterview || !interviewAnswer.trim()}
+                      className="rounded-xl btn-dibs-primary px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
                     >
-                      Evaluate Answer
+                      {evaluatingInterview ? "Evaluating..." : "Evaluate Answer"}
                     </button>
                     {activeQIdx + 1 < interviewQs.length && (
                       <button

@@ -237,10 +237,14 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = (await req.json()) as {
-    action: "toggle_milestone" | "update_cert";
+    action: "toggle_milestone" | "update_cert" | "upload_cert";
     milestoneId?: string;
     certId?: string;
     progress?: number;
+    customTitle?: string;
+    customProvider?: string;
+    credentialUrl?: string;
+    certificateFileName?: string;
   };
 
   if (body.action === "toggle_milestone" && body.milestoneId) {
@@ -286,6 +290,60 @@ export async function PATCH(req: NextRequest) {
     if (completed && user.readinessScore > 0) {
       user.readinessScore = Math.min(99, user.readinessScore + 3);
     }
+    await writeDbAsync(db);
+    const pubUser = toPublicProfile(user);
+    const res = NextResponse.json({
+      certProgress: db.certProgress.filter((cp) => cp.userId === user.id),
+      user: pubUser,
+    });
+    res.cookies.set(PROFILE_COOKIE_NAME, signJsonToken(pubUser), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return res;
+  }
+
+  if (body.action === "upload_cert") {
+    const certId = (body.certId || `custom-${Date.now()}`).trim();
+    const now = new Date().toISOString();
+    const existing = db.certProgress.find(
+      (cp) => cp.userId === user.id && cp.certId === certId
+    );
+    if (existing) {
+      existing.progress = 100;
+      existing.completed = true;
+      existing.credentialUrl = body.credentialUrl?.trim() || existing.credentialUrl;
+      existing.certificateFileName = body.certificateFileName?.trim() || existing.certificateFileName;
+      existing.customTitle = body.customTitle?.trim() || existing.customTitle;
+      existing.customProvider = body.customProvider?.trim() || existing.customProvider;
+      existing.verifiedAt = now;
+      existing.updatedAt = now;
+    } else {
+      db.certProgress.push({
+        userId: user.id,
+        certId,
+        progress: 100,
+        completed: true,
+        credentialUrl: body.credentialUrl?.trim() || undefined,
+        certificateFileName: body.certificateFileName?.trim() || undefined,
+        customTitle: body.customTitle?.trim() || undefined,
+        customProvider: body.customProvider?.trim() || undefined,
+        verifiedAt: now,
+        updatedAt: now,
+      });
+    }
+    if (user.readinessScore > 0) {
+      user.readinessScore = Math.min(99, user.readinessScore + 3);
+    }
+    createNotification(db, {
+      userId: user.id,
+      category: "milestone",
+      title: `Certificate Verified: ${body.customTitle?.trim() || certId}`,
+      body: "Your uploaded certificate proof has been recorded and verified on your profile.",
+      link: "/readiness?tab=certs",
+    });
     await writeDbAsync(db);
     const pubUser = toPublicProfile(user);
     const res = NextResponse.json({

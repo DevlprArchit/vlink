@@ -3,22 +3,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Award,
-  BookOpen,
-  Briefcase,
-  CheckCircle2,
-  Filter,
   GraduationCap,
   MessageSquare,
   Search,
   ShieldCheck,
   Sparkles,
   Star,
-  ThumbsUp,
   UserCheck,
   UserPlus,
   Users,
-  Zap,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { PublicProfile } from "@/lib/types";
@@ -43,7 +36,6 @@ export default function NetworkPage() {
   const [selectedRole, setSelectedRole] = useState("all");
   const [activeTab, setActiveTab] = useState<NetworkTab>("explore");
   const [loading, setLoading] = useState(true);
-  const [endorsingMap, setEndorsingMap] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -88,28 +80,6 @@ export default function NetworkPage() {
       setUser(data.user);
       showToast(isConn ? "Connection removed." : "Connection request accepted & linked!");
       await loadNetwork();
-    }
-  }
-
-  async function handleEndorse(targetUserId: string, endorseSkill: string) {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-    const key = `${targetUserId}-${endorseSkill}`;
-    setEndorsingMap((prev) => ({ ...prev, [key]: true }));
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "endorse", targetUserId, endorseSkill }),
-      });
-      if (res.ok) {
-        showToast(`Endorsed ${endorseSkill}! Skill score updated.`);
-        await loadNetwork();
-      }
-    } finally {
-      setEndorsingMap((prev) => ({ ...prev, [key]: false }));
     }
   }
 
@@ -346,10 +316,6 @@ export default function NetworkPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredPeers.map((peer) => {
             const isConnected = user ? user.connections.includes(peer.id) : false;
-            const rec = recMap.get(peer.id);
-            const isAlumni = peer.headline.toLowerCase().includes("amazon") ||
-              peer.headline.toLowerCase().includes("google") ||
-              peer.headline.toLowerCase().includes("sde");
 
             return (
               <div
@@ -357,115 +323,24 @@ export default function NetworkPage() {
                 className="flex flex-col justify-between rounded-2xl border border-slate-200/80 glass-panel p-5 shadow-sm transition hover:shadow-md"
               >
                 <div>
-                  {/* Top Row: Avatar + Name + Campus Badge + Readiness Score */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-base font-bold text-slate-900 shadow-sm"
-                        style={{ backgroundColor: peer.avatarColor }}
-                      >
-                        {peer.name.slice(0, 1).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h2 className="text-sm font-bold text-slate-900 font-bold">{peer.name}</h2>
-                          {peer.verifiedCampusBadge && (
-                            <span title="Verified Campus Student / Alumnus">
-                              <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] font-medium text-slate-500 font-mono">{peer.campus}</p>
-                      </div>
+                  {/* Top Row: Avatar + Name + Campus */}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-base font-bold text-slate-900 shadow-sm"
+                      style={{ backgroundColor: peer.avatarColor }}
+                    >
+                      {peer.name.slice(0, 1).toUpperCase()}
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
-                        <Award className="h-3 w-3" /> {peer.readinessScore}/100
-                      </span>
-                      <span className="mt-0.5 text-[10px] text-slate-500">{peer.readinessTier}</span>
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">{peer.name}</h2>
+                      <p className="text-[11px] font-medium text-slate-500 font-mono">{peer.campus}</p>
                     </div>
                   </div>
 
-                  {/* Headline & Target Role */}
-                  <p className="mt-3 text-xs font-semibold text-slate-800 font-medium line-clamp-1">{peer.headline}</p>
-                  <p className="mt-1 line-clamp-2 text-[11px] text-slate-500 font-mono leading-relaxed">{peer.bio}</p>
-
-                  {/* AI Similarity Match Banner */}
-                  {rec && (
-                    <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-[11px] text-indigo-950">
-                      <div className="flex items-center justify-between font-bold">
-                        <span className="flex items-center gap-1 text-indigo-700">
-                          <Sparkles className="h-3 w-3 text-amber-500" /> AI Compatibility Match
-                        </span>
-                        <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-950">
-                          {rec.similarity_score}% Match
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-indigo-800">{rec.reason}</p>
-                    </div>
-                  )}
-
-                  {/* Mentor Highlight Pill if alumni */}
-                  {isAlumni && (
-                    <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
-                      <Star className="h-3 w-3 text-amber-600 fill-amber-500" />
-                      HIET Alumni Mentor · Open for Mock Interviews & Guidance
-                    </div>
-                  )}
-
-                  {/* Project Showcase preview */}
-                  {peer.projects && peer.projects.length > 0 && (
-                    <div className="mt-3 rounded-xl border border-slate-200/70 bg-slate-50/60 p-2.5">
-                      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <BookOpen className="h-3 w-3 text-slate-500 font-mono" /> Featured Project
-                        </span>
-                        <span>{peer.projects[0].techStack.slice(0, 2).join(", ")}</span>
-                      </div>
-                      <p className="mt-1 text-xs font-bold text-slate-800 font-medium line-clamp-1">
-                        {peer.projects[0].title}
-                      </p>
-                      <p className="text-[11px] text-slate-500 font-mono line-clamp-1">
-                        {peer.projects[0].description}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Skills with Endorsement Actions */}
-                  <div className="mt-3">
-                    <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      <span>Skills</span>
-                      <span className="text-[9px] text-brand-600">Click thumb to endorse</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {peer.skills.slice(0, 5).map((sk) => {
-                        const isEndorsing = endorsingMap[`${peer.id}-${sk.name}`];
-                        return (
-                          <div
-                            key={sk.name}
-                            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
-                              sk.verified
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                : "border-slate-200/80 bg-slate-50/80 border border-slate-200/60 text-slate-800"
-                            }`}
-                          >
-                            {sk.verified && <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />}
-                            <span>{sk.name}</span>
-                            <button
-                              type="button"
-                              disabled={isEndorsing}
-                              onClick={() => void handleEndorse(peer.id, sk.name)}
-                              title={`Endorse ${peer.name}'s ${sk.name} skill`}
-                              className="ml-0.5 flex items-center gap-0.5 rounded px-1 text-[10px] text-slate-500 font-mono hover:bg-slate-200 hover:text-indigo-700"
-                            >
-                              <ThumbsUp className="h-2.5 w-2.5" />
-                              <span>{sk.endorsements}</span>
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  {/* Role / Headline */}
+                  <p className="mt-3 text-xs font-semibold text-slate-800 line-clamp-2">
+                    {peer.targetRole || peer.headline}
+                  </p>
                 </div>
 
                 {/* Bottom Actions: Connect / Message */}

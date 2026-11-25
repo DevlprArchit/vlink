@@ -92,7 +92,7 @@ export function AuthGateModal() {
               mode === "register" ? "bg-white text-[#4F46E5] font-bold shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Register (Campus Email)
+            Register
           </button>
           <button
             type="button"
@@ -130,18 +130,18 @@ export function AuthGateModal() {
           )}
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Campus Email</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Email Address</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@hiet.co.in"
+              placeholder="you@gmail.com or student@hiet.co.in"
               className="w-full rounded-xl border border-slate-200/80 bg-white/80 px-3.5 py-2 text-sm text-slate-800 outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
             />
             {mode === "register" && (
               <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 font-mono">
-                Campus verification is pending until your email address is confirmed.
+                Any valid email works (Gmail, Outlook, Yahoo, or campus email).
               </p>
             )}
           </div>

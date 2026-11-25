@@ -180,6 +180,11 @@ export interface UserCertificationProgress {
   certId: string;
   progress: number;
   completed: boolean;
+  credentialUrl?: string;
+  certificateFileName?: string;
+  verifiedAt?: string;
+  customTitle?: string;
+  customProvider?: string;
   updatedAt: string;
 }
 

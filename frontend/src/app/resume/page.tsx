@@ -109,13 +109,13 @@ export default function ResumeBuilderPage() {
     fullName: "",
     targetRole: "",
     email: "",
-    phone: "+91 98765 43210",
-    location: "India (Remote / Hybrid)",
-    portfolio: "github.com/vlink-dev",
+    phone: "",
+    location: "",
+    portfolio: "",
     summary: "",
     education: "",
     skills: "",
-    certifications: "AWS Certified Cloud Practitioner, Meta Front-End Developer Certified",
+    certifications: "",
     projects: [],
   });
 
@@ -124,22 +124,12 @@ export default function ResumeBuilderPage() {
       setResumeForm((prev) => ({
         ...prev,
         fullName: prev.fullName || user.name || "",
-        targetRole: prev.targetRole || user.targetRole || "Software Engineer",
+        targetRole: prev.targetRole || user.targetRole || "",
         email: prev.email || user.email || "",
-        location: prev.location || user.campus || "India (Remote / Hybrid)",
-        summary:
-          prev.summary ||
-          assist?.professional_summary ||
-          user.bio ||
-          `Results-driven ${user.targetRole || "Software Engineer"} specializing in modern scalable web systems, data architectures, and full-stack development.`,
-        education:
-          prev.education ||
-          user.education ||
-          "B.Tech in Computer Science & Engineering · CGPA: 8.8/10",
-        skills:
-          prev.skills ||
-          user.skills.map((s) => s.name).join(", ") ||
-          "TypeScript, React, Next.js, Python, Node.js, PostgreSQL, Docker, AWS, Git",
+        location: prev.location || user.campus || "",
+        summary: prev.summary || assist?.professional_summary || user.bio || "",
+        education: prev.education || user.education || "",
+        skills: prev.skills || user.skills.map((s) => s.name).join(", ") || "",
         projects:
           prev.projects.length > 0
             ? prev.projects
