@@ -143,7 +143,8 @@ function trySafeArithmetic(input: string): string | null {
 async function fetchWikipediaSummary(topic: string): Promise<{ title: string; extract: string; url?: string } | null> {
   const cleaned = topic
     .replace(/[?!.]+$/, "")
-    .replace(/^(who is|who was|what is|what are|what was|tell me about|explain|define|overview of|history of)\s+(a|an|the)?\s*/i, "")
+    .replace(/^(who is|who was|what is|what are|what was|tell me about|explain|define|overview of|history of)\s+/i, "")
+    .replace(/^(a|an|the)\s+/i, "")
     .trim();
   if (!cleaned || cleaned.length < 2 || cleaned.length > 80) return null;
 
